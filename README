@@ -3,3 +3,10 @@ disruptorC
 C implementation of LMAX's disruptor pattern.
 
 Tested on Mac OS X 10.7.4 and Fedora 17.
+
+Build by:
+
+      ./bootstrap 
+      make
+
+Then run the tests i test/.
