@@ -56,7 +56,7 @@
 #define VACANT UINT_FAST64_MAX
 
 /*
- * Cacheline padded counter. Consider alligning to cacheline size.
+ * Cacheline padded counter. 
  */
 typedef struct {
         uint_fast64_t count;
@@ -65,7 +65,7 @@ typedef struct {
 
 /*
  * Cacheline padded cursor into ring buffer. Wrapping around
- * forever. Consider alligning to cacheline size.
+ * forever. 
  */
 typedef struct {
         uint_fast64_t sequence;
@@ -73,8 +73,7 @@ typedef struct {
 } cursor_t __attribute__((aligned(CACHE_LINE_SIZE)));
 
 /*
- * Cacheline padded elements of ring buffer. Consider alligning to
- * cacheline size.
+ * Cacheline padded elements of ring.
  */
 #define DEFINE_EVENT_TYPE(content_type__, event_type_name__)                                                            \
     typedef struct {                                                                                                    \
@@ -99,6 +98,10 @@ typedef struct {
             event_type_name__ buffer[event_count__];                                                                \
     } ring_buffer_type_name__
 
+/*
+ * This function must always be invoked on a ring buffer before it is
+ * put into use.
+ */
 #define DEFINE_RING_BUFFER_INIT(event_processor_count__, event_count__, ring_buffer_type_name__) \
 static inline void                                                                               \
 ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                                    \
@@ -148,7 +151,7 @@ event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,   
 
 /*
  * EventProcessors must unregister to free up their spot in the event
- * processor array in the ring buffer so that other processors can
+ * processor array in the ring buffer, so that other processors can
  * hook on.
  */
 #define DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_type_name__)                                   \
