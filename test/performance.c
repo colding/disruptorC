@@ -128,7 +128,7 @@ out:
         gettimeofday(&end, NULL);
 
         event_processor_barrier_unregister(buffer, &reg_number);
-        printf("Event processor done\n", reg_number.count);
+        printf("Event processor done\n");
 
         return NULL;
 }

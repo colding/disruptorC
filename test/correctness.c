@@ -156,7 +156,7 @@ event_processor_thread(void *arg)
         } while (1);
 out:
         event_processor_barrier_unregister(buffer, &reg_number);
-        printf("Event processor done\n", reg_number.count);
+        printf("Event processor done\n");
 
         return NULL;
 }
