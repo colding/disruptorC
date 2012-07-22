@@ -1,0 +1,109 @@
+#!/bin/sh
+#
+# Run this to generate all the initial makefiles, etc.
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+#
+
+# Not all echo versions allow -n, so we check what is possible. This test
+# is based on the one in autoconf (from gnome-autogen.sh). It determines
+# how to tell echo not to print the trailing \n.
+ECHO_N="" 
+ECHO_C="" 
+ECHO_T=""
+case `echo "testing\c"; echo 1,2,3`,`echo -n testing; echo 1,2,3` in
+ *c*,-n*) ECHO_N="" ECHO_C='
+' ECHO_T=' ' ;;
+ *c*,* ) ECHO_N="-n" ECHO_C="" ECHO_T="" ;;
+ *) ECHO_N="" ECHO_C='\c' ECHO_T="" ;;
+esac 
+
+# Prety printing (from gnome-autogen.sh)
+boldface="`tput bold 2>/dev/null`"
+normal="`tput sgr0 2>/dev/null`"
+printbold() {
+    echo $ECHO_N "$boldface$ECHO_C"
+    echo "$@"
+    echo $ECHO_N "$normal$ECHO_C"
+}    
+printerr() {
+    echo "$@" >&2
+}
+
+system_name=`uname -s`
+case "$system_name" in
+    Darwin)
+        export LIBTOOLIZE=`which glibtoolize`
+        export LIBTOOL=`which glibtool`
+        ;;
+    *)
+        export LIBTOOLIZE=`which libtoolize`
+        export LIBTOOL=`which libtool`
+        ;;
+esac
+
+# Name of package
+PKG_NAME=${PKG_NAME:-DisruptorC}
+
+# yes, I'm paranoid...
+srcdir=`dirname $0`
+srcdir=${srcdir:-.}
+
+(test -f $srcdir/configure.ac \
+  && test -f $srcdir/Makefile.am \
+  && test -f $srcdir/src/disruptor.h \
+  && test -f $srcdir/test/correctness.c \
+  && test -f $srcdir/test/performance.c \
+  && test -f $srcdir/test/Makefile.am) || {
+    printerr "**Error**: Directory '$(pwd)' does not look like the top-level $PKG_NAME directory"
+    printerr
+    exit 1
+}
+
+if test "x$1" = "xnoreconf"; then
+    shift
+    printbold "Running aclocal..."
+    aclocal --force -I m4
+
+    printbold "Running $LIBTOOLIZE..."
+    "$LIBTOOLIZE" --force --copy
+
+    printbold "Running aclocal again..."
+    aclocal --force -I m4
+
+    printbold "Running Autoheader..."
+    autoheader
+
+    # this prevents automake from thinking config.h.in is out of
+    # date, since autoheader doesn't touch the file if it doesn't
+    # change.
+    test -f config.h.in && touch config.h.in
+
+    printbold "Running Autoconf..."
+    autoconf
+
+    printbold "Running Automake..."
+    automake --warnings=all --Werror --gnu --add-missing --force --copy 
+else
+    printbold "Running autoreconf..."
+    autoreconf --warnings=all --force --verbose --install
+fi
+
+
+conf_flags="--cache-file=/dev/null"
+
+if [ "$#" = 0 -a "x$NOCONFIGURE" = "x" ]; then
+    printerr "**Warning**: I am going to run \`configure' with \"$conf_flags\"."
+    printerr "Please specify any additional configure flags on the "\`$0\'" command line."
+    printerr
+fi
+
+if test x$NOCONFIGURE = x; then
+    printbold Running $srcdir/configure $conf_flags "$@" ...
+    $srcdir/configure $conf_flags "$@" && echo Now type \`make\' to compile $PKG_NAME || exit 1
+else
+    echo Skipping configure process.
+fi
