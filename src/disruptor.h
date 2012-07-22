@@ -90,7 +90,6 @@ typedef struct {
  */
 #define DEFINE_RING_BUFFER_TYPE(event_processor_count__, event_count__, event_type_name__, ring_buffer_type_name__) \
     typedef struct {                                                                                                \
-            count_t size;                                                                                           \
             count_t reduced_size;                                                                                   \
             VOLATILE cursor_t max_read_cursor;                                                                      \
             VOLATILE cursor_t write_cursor;                                                                         \
@@ -107,7 +106,6 @@ static inline void                                                              
 ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                                    \
 {                                                                                                \
         memset((void*)ring_buffer, 0, sizeof(ring_buffer_type_name__));                          \
-        ring_buffer->size.count = event_count__;                                                 \
         ring_buffer->reduced_size.count = event_count__ - 1;                                     \
         unsigned int n;                                                                          \
         for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n)      \
@@ -210,7 +208,7 @@ publisher_port_nextEntry(ring_buffer_type_name__ * const ring_buffer,           
                         if (ring_buffer->event_processor_cursors[n].sequence < minimum_reader.sequence)     \
                                 minimum_reader.sequence = ring_buffer->event_processor_cursors[n].sequence; \
                 }                                                                                           \
-                if (((cursor->sequence - minimum_reader.sequence) < ring_buffer->size.count)                \
+                if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)                \
                     || (UINT_FAST64_MAX == minimum_reader.sequence))                                        \
                         return;                                                                             \
                 YIELD();                                                                                    \
