@@ -30,6 +30,9 @@ dnl Initialize libtool
 LT_INIT([disable-shared])
 AC_SUBST([LIBTOOL_DEPS])
 
+# unset -g -O2 in CFLAGS unless the user specified otherwise
+AS_IF([test "x${ac_cv_env_CFLAGS_set}" = "x"], [CFLAGS=""])
+
 # Checks for programs.
 
 # Checks for libraries.
@@ -149,18 +152,19 @@ else
 fi
 
 dnl Should only be searchable in "" include statements
-dnl DISRUPTORC_INCLUDES="$iquote$DISRUPTORC_top_dir $iquote$DISRUPTORC_top_dir/disruptor"
 DISRUPTORC_INCLUDES="$iquote$DISRUPTORC_top_dir"
-
-dnl Now set the preprocessor arguments
-DISRUPTORC_CFLAGS="$DISRUPTORC_INCLUDES"
-AC_SUBST(DISRUPTORC_CFLAGS)
 
 dnl
 dnl CFLAGS
 dnl
-DISRUPTORC_CFLAGS="$PTHREAD_CFLAGS"
 
+dnl Now set the preprocessor arguments
+DISRUPTORC_CFLAGS="$DISRUPTORC_INCLUDES"
+
+dnl Pthread stuff as needed
+DISRUPTORC_CFLAGS="$DISRUPTORC_CFLAGS $PTHREAD_CFLAGS"
+
+dnl Warnings and other compiler options
 AX_CFLAGS_GCC_OPTION(-Wall, DISRUPTORC_CFLAGS)
 AX_CFLAGS_GCC_OPTION(-Werror, DISRUPTORC_CFLAGS)
 AX_CFLAGS_GCC_OPTION(-Wundef, DISRUPTORC_CFLAGS)
@@ -174,6 +178,7 @@ AX_CFLAGS_GCC_OPTION(-fprefetch-loop-arrays, DISRUPTORC_CFLAGS)
 AX_CFLAGS_GCC_OPTION(-g , DISRUPTORC_CFLAGS)
 AX_CFLAGS_GCC_OPTION(-O2, DISRUPTORC_CFLAGS)
 
+dnl Needed to get size of int64 on linux
 if test "x$target" = "xLinux"; then
 	DISRUPTORC_CFLAGS="$DISRUPTORC_CFLAGS -D__STDC_LIMIT_MACROS"
 fi
@@ -188,7 +193,6 @@ fi
 if test "x$enable_debug" = "xyes"; then
 	LDFLAGS="-rdynamic $LDFLAGS"
 fi
-LDFLAGS="-pthread $LDFLAGS"
 LDFLAGS="-L$DISRUPTORC_top_dir/ $LDFLAGS"
 AC_SUBST(LDFLAGS)
 
