@@ -16,3 +16,8 @@ TODO:
 
 * Use the __atomic* operations from GCC 4.7 instead of the __sync*
   functions, to fix the performance issues with __sync*.
+
+NOTES:
+
+* Uncomment the "CC=g++" line in configure.ac to get approximately 10%
+  more performance for free.
