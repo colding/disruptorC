@@ -105,9 +105,10 @@ typedef struct {
 static inline void                                                                               \
 ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                                    \
 {                                                                                                \
+        unsigned int n;                                                                          \
+                                                                                                 \
         memset((void*)ring_buffer, 0, sizeof(ring_buffer_type_name__));                          \
         ring_buffer->reduced_size.count = event_count__ - 1;                                     \
-        unsigned int n;                                                                          \
         for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n)      \
                 ring_buffer->event_processor_cursors[n].sequence = VACANT;                       \
 }
@@ -137,6 +138,7 @@ event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,   
                                  count_t * const event_processor_number)                                                                                        \
 {                                                                                                                                                               \
         unsigned int n;                                                                                                                                         \
+                                                                                                                                                                \
         do {                                                                                                                                                    \
                 for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                                                           \
                         if (__sync_bool_compare_and_swap(&(ring_buffer->event_processor_cursors[n].sequence), VACANT, ring_buffer->max_read_cursor.sequence)) { \
@@ -208,7 +210,7 @@ publisher_port_nextEntry(ring_buffer_type_name__ * const ring_buffer,           
                         if (ring_buffer->event_processor_cursors[n].sequence < minimum_reader.sequence)     \
                                 minimum_reader.sequence = ring_buffer->event_processor_cursors[n].sequence; \
                 }                                                                                           \
-                if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)                \
+                if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)       \
                     || (UINT_FAST64_MAX == minimum_reader.sequence))                                        \
                         return;                                                                             \
                 YIELD();                                                                                    \
@@ -224,7 +226,9 @@ static inline void                                                              
 publisher_port_commitEntry(ring_buffer_type_name__ * const ring_buffer,          \
                            const cursor_t * const cursor)                        \
 {                                                                                \
-        while (ring_buffer->max_read_cursor.sequence != (cursor->sequence - 1))  \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;       \
+                                                                                 \
+        while (ring_buffer->max_read_cursor.sequence != required_read_sequence)  \
                 YIELD();                                                         \
         __sync_fetch_and_add(&ring_buffer->max_read_cursor.sequence, 1);         \
 }
