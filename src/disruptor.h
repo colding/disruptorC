@@ -87,6 +87,8 @@ typedef struct {
  *
  * Event publishers may write from (but excluding) max_read_cursor and
  * up to and including max_write_cursor, but no futher.
+ *
+ * event_count__ MUST be a power of two.
  */
 #define DEFINE_RING_BUFFER_TYPE(event_processor_count__, event_count__, event_type_name__, ring_buffer_type_name__) \
     typedef struct {                                                                                                \
