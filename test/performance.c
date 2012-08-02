@@ -62,7 +62,7 @@ DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_GETENTRY_FUNCTION(event_t, ring_buffer_t);
 DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_FUNCTION(ring_buffer_t);
+DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 ring_buffer_t ring_buffer;
 struct timeval start;
@@ -152,12 +152,12 @@ main(int argc, char *argv[])
         do {
                 publisher_port_nextEntry(&ring_buffer, &cursor);
                 ring_buffer.buffer[get_index(ring_buffer.reduced_size.count, &cursor)].content = cursor.sequence;
-                publisher_port_commitEntry(&ring_buffer, &cursor);
+                publisher_port_commitEntry_blocking(&ring_buffer, &cursor);
         } while (--reps);
 
         publisher_port_nextEntry(&ring_buffer, &cursor);
         ring_buffer.buffer[get_index(ring_buffer.reduced_size.count, &cursor)].content = STOP;
-        publisher_port_commitEntry(&ring_buffer, &cursor);
+        publisher_port_commitEntry_blocking(&ring_buffer, &cursor);
         printf("Publisher done\n");
 
         // join event processor

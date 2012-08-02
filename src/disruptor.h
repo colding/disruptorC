@@ -56,7 +56,7 @@
 #define VACANT UINT_FAST64_MAX
 
 /*
- * Cacheline padded counter. 
+ * Cacheline padded counter.
  */
 typedef struct {
         uint_fast64_t count;
@@ -64,8 +64,7 @@ typedef struct {
 } count_t __attribute__((aligned(CACHE_LINE_SIZE)));
 
 /*
- * Cacheline padded cursor into ring buffer. Wrapping around
- * forever. 
+ * Cacheline padded cursor into ring buffer. Wrapping around forever.
  */
 typedef struct {
         uint_fast64_t sequence;
@@ -82,8 +81,8 @@ typedef struct {
     } event_type_name__ __attribute__((aligned(CACHE_LINE_SIZE)))
 
 /*
- * Event processors may read up to and including max_read_cursor, but no
- * futher.
+ * Event processors may read up to and including max_read_cursor, but
+ * no futher.
  *
  * Event publishers may write from (but excluding) max_read_cursor and
  * up to and including max_write_cursor, but no futher.
@@ -126,8 +125,7 @@ get_index(const uint_fast64_t reduced_size, const cursor_t * const cursor)
 }
 
 /*
- * EventProcessors must register before starting to process
- * events.
+ * EventProcessors must register before starting to process events.
  *
  * They must furthermore update their spot, as identified by the
  * number returned when registering, in the event_processor_cursors
@@ -221,18 +219,36 @@ publisher_port_nextEntry(ring_buffer_type_name__ * const ring_buffer,           
 
 /*
  * Publishers must call this function to commit the event to the event
- * processors.
+ * processors. Blocks until the event has been committed.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_FUNCTION(ring_buffer_type_name__) \
-static inline void                                                               \
-publisher_port_commitEntry(ring_buffer_type_name__ * const ring_buffer,          \
-                           const cursor_t * const cursor)                        \
-{                                                                                \
-        const uint_fast64_t required_read_sequence = cursor->sequence - 1;       \
-                                                                                 \
-        while (ring_buffer->max_read_cursor.sequence != required_read_sequence)  \
-                YIELD();                                                         \
-        __sync_fetch_and_add(&ring_buffer->max_read_cursor.sequence, 1);         \
+#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__) \
+static inline void                                                                        \
+publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,          \
+                                    const cursor_t * const cursor)                        \
+{                                                                                         \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                \
+                                                                                          \
+        while (ring_buffer->max_read_cursor.sequence != required_read_sequence)           \
+                YIELD();                                                                  \
+        __sync_fetch_and_add(&ring_buffer->max_read_cursor.sequence, 1);                  \
+}
+
+/*
+ * Publishers must call this function to commit the event to the event
+ * processors. Returns 1 (one) if the event has been commited, 0
+ * (zero) otherwise.
+ */
+#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__) \
+static inline int                                                                            \
+publisher_port_commitEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,          \
+                                       const cursor_t * const cursor)                        \
+{                                                                                            \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                   \
+                                                                                             \
+        if (ring_buffer->max_read_cursor.sequence != required_read_sequence)                 \
+                return 0;                                                                    \
+        __sync_fetch_and_add(&ring_buffer->max_read_cursor.sequence, 1);                     \
+        return 1;                                                                            \
 }
 
 #endif //  DISRUPTORC_H
