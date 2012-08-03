@@ -59,9 +59,9 @@ DEFINE_RING_BUFFER_TYPE(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, event_t, ring_b
 DEFINE_RING_BUFFER_INIT(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_FUNCTION(ring_buffer_t);
+DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_GETENTRY_FUNCTION(event_t, ring_buffer_t);
-DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_FUNCTION(ring_buffer_t);
+DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 ring_buffer_t ring_buffer;
@@ -113,7 +113,7 @@ event_processor_thread(void *arg)
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
-                event_processor_barrier_waitFor(buffer, &cursor_upper_limit);
+                event_processor_barrier_waitFor_blocking(buffer, &cursor_upper_limit);
                 for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { // batching
 
                         event = event_processor_barrier_getEntry(buffer, &n);
@@ -150,12 +150,12 @@ main(int argc, char *argv[])
 
         gettimeofday(&start, NULL);
         do {
-                publisher_port_nextEntry(&ring_buffer, &cursor);
+                publisher_port_nextEntry_blocking(&ring_buffer, &cursor);
                 ring_buffer.buffer[get_index(ring_buffer.reduced_size.count, &cursor)].content = cursor.sequence;
                 publisher_port_commitEntry_blocking(&ring_buffer, &cursor);
         } while (--reps);
 
-        publisher_port_nextEntry(&ring_buffer, &cursor);
+        publisher_port_nextEntry_blocking(&ring_buffer, &cursor);
         ring_buffer.buffer[get_index(ring_buffer.reduced_size.count, &cursor)].content = STOP;
         publisher_port_commitEntry_blocking(&ring_buffer, &cursor);
         printf("Publisher done\n");

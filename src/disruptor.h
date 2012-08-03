@@ -169,15 +169,33 @@ event_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer, 
  * array to know with which sequence number to begin. An exception is
  * if the sequence number is 0, then it must skip 0 and waitFor 1.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_FUNCTION(ring_buffer_type_name__)   \
-static inline void                                                                 \
-event_processor_barrier_waitFor(const ring_buffer_type_name__ * const ring_buffer, \
-                                cursor_t * const cursor)                           \
-{                                                                                  \
-        while (cursor->sequence > ring_buffer->max_read_cursor.sequence)           \
-                YIELD();                                                           \
-                                                                                   \
-        cursor->sequence = ring_buffer->max_read_cursor.sequence;                  \
+#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__)   \
+static inline void                                                                          \
+event_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const ring_buffer, \
+                                         cursor_t * const cursor)                           \
+{                                                                                           \
+        while (cursor->sequence > ring_buffer->max_read_cursor.sequence)                    \
+                YIELD();                                                                    \
+                                                                                            \
+        cursor->sequence = ring_buffer->max_read_cursor.sequence;                           \
+}
+
+/*
+ * EventProcessors must read their spot in the event_processor_cursors
+ * array to know with which sequence number to begin. An exception is
+ * if the sequence number is 0, then it must skip 0 and waitFor 1.
+ */
+#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__)   \
+static inline int                                                                              \
+event_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * const ring_buffer, \
+                                            cursor_t * const cursor)                           \
+{                                                                                              \
+        if (cursor->sequence > ring_buffer->max_read_cursor.sequence)                          \
+                return 0;                                                                      \
+                                                                                               \
+        cursor->sequence = ring_buffer->max_read_cursor.sequence;                              \
+                                                                                               \
+	return 1;                                                                              \
 }
 
 /*
@@ -191,14 +209,13 @@ event_processor_barrier_getEntry(const ring_buffer_type_name__ * const ring_buff
         return &ring_buffer->buffer[get_index(ring_buffer->reduced_size.count, cursor)];             \
 }
 
-
 /*
  * Publishers must call this function to get an event to write into.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_FUNCTION(ring_buffer_type_name__)                              \
+#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                     \
 static inline void                                                                                          \
-publisher_port_nextEntry(ring_buffer_type_name__ * const ring_buffer,                                       \
-                         cursor_t * const  cursor)                                                          \
+publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,                              \
+                                  cursor_t * const  cursor)                                                 \
 {                                                                                                           \
         unsigned int n;                                                                                     \
         cursor_t minimum_reader;                                                                            \
@@ -215,6 +232,29 @@ publisher_port_nextEntry(ring_buffer_type_name__ * const ring_buffer,           
                         return;                                                                             \
                 YIELD();                                                                                    \
         } while (1);                                                                                        \
+}
+
+/*
+ * Publishers must call this function to get an event to write into.
+ */
+#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)          \
+static inline int                                                                                   \
+publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                   \
+                                     cursor_t * const  cursor)                                      \
+{                                                                                                   \
+        unsigned int n;                                                                             \
+        cursor_t minimum_reader;                                                                    \
+                                                                                                    \
+        cursor->sequence = __sync_add_and_fetch(&ring_buffer->write_cursor.sequence, 1);            \
+        minimum_reader.sequence = UINT_FAST64_MAX;                                                  \
+        for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {       \
+                if (ring_buffer->event_processor_cursors[n].sequence < minimum_reader.sequence)     \
+                        minimum_reader.sequence = ring_buffer->event_processor_cursors[n].sequence; \
+        }                                                                                           \
+        if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)       \
+            || (UINT_FAST64_MAX == minimum_reader.sequence))                                        \
+                return 1;                                                                           \
+        return 0;                                                                                   \
 }
 
 /*
