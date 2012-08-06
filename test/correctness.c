@@ -61,6 +61,7 @@ DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_GETENTRY_FUNCTION(event_t, ring_buffer_t);
+DEFINE_EVENT_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
@@ -146,10 +147,7 @@ event_processor_thread(void *arg)
                                 goto out;
                         }
                 }
-                if (!__sync_bool_compare_and_swap(&(buffer->event_processor_cursors[reg_number.count].sequence), buffer->event_processor_cursors[reg_number.count].sequence, cursor_upper_limit.sequence)) {
-                        printf("Event processor could not set cursor - ERROR\n");
-                        goto out;
-                }
+		event_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
 
                 ++cursor_upper_limit.sequence;
                 cursor.sequence = cursor_upper_limit.sequence;

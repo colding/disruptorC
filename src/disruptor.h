@@ -210,6 +210,19 @@ event_processor_barrier_getEntry(const ring_buffer_type_name__ * const ring_buff
 }
 
 /*
+ * EventProcessors must tell the ring buffer how far they are done
+ * reading the events.
+ */
+#define DEFINE_EVENT_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_type_name__)                                                          \
+static inline void                                                                                                                             \
+event_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer,                                                              \
+                                     const count_t * const event_processor_number,                                                             \
+                                     const cursor_t * const cursor)                                                                            \
+{                                                                                                                                              \
+        __atomic_store_n(&(ring_buffer->event_processor_cursors[event_processor_number->count].sequence), cursor->sequence, __ATOMIC_SEQ_CST); \
+}
+
+/*
  * Publishers must call this function to get an event to write into.
  */
 #define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                     \
