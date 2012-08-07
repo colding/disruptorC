@@ -96,7 +96,7 @@ typedef struct {
             VOLATILE cursor_t write_cursor;                                                                         \
             VOLATILE cursor_t event_processor_cursors[event_processor_count__];                                     \
             event_type_name__ buffer[event_count__];                                                                \
-    } ring_buffer_type_name__ __attribute__((aligned(CACHE_LINE_SIZE)))
+    } ring_buffer_type_name__
 
 /*
  * This function must always be invoked on a ring buffer before it is
