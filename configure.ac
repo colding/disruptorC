@@ -26,9 +26,6 @@ dnl Standard checks
 AC_LANG([C])
 AC_PROG_CXX
 
-dnl Uncomment this if you want roughly 10% more performance
-#CC=g++
-
 dnl Initialize libtool
 LT_INIT([disable-shared])
 AC_SUBST([LIBTOOL_DEPS])

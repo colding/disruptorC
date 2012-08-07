@@ -96,7 +96,7 @@ typedef struct {
             VOLATILE cursor_t write_cursor;                                                                         \
             VOLATILE cursor_t event_processor_cursors[event_processor_count__];                                     \
             event_type_name__ buffer[event_count__];                                                                \
-    } ring_buffer_type_name__
+    } ring_buffer_type_name__ __attribute__((aligned(CACHE_LINE_SIZE)))
 
 /*
  * This function must always be invoked on a ring buffer before it is
@@ -142,7 +142,7 @@ event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,   
                                                                                                                                                                                                      \
         do {                                                                                                                                                                                         \
                 for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                                                                                                \
-                        if (__atomic_compare_exchange_n(&ring_buffer->event_processor_cursors[n].sequence, &vacant, ring_buffer->max_read_cursor.sequence, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) { \
+                        if (__atomic_compare_exchange_n(&ring_buffer->event_processor_cursors[n].sequence, &vacant, ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) { \
                                 event_processor_number->count = n;                                                                                                                                   \
                                 return;                                                                                                                                                              \
                         }                                                                                                                                                                            \
@@ -161,7 +161,7 @@ static inline void                                                              
 event_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer,                                                      \
                                    count_t * const event_processor_number)                                                           \
 {                                                                                                                                    \
-        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, VACANT__, __ATOMIC_SEQ_CST); \
+        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, VACANT__, __ATOMIC_RELEASE); \
 }
 
 
@@ -220,7 +220,7 @@ event_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer
                                      const count_t * const event_processor_number,                                                           \
                                      const cursor_t * const cursor)                                                                          \
 {                                                                                                                                            \
-        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, cursor->sequence, __ATOMIC_SEQ_CST); \
+        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, cursor->sequence, __ATOMIC_RELEASE); \
 }
 
 /*
@@ -235,11 +235,11 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
         uint_fast64_t seq;                                                                                          \
         cursor_t minimum_reader;                                                                                    \
                                                                                                                     \
-        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_SEQ_CST);            \
+        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);            \
         do {                                                                                                        \
                 minimum_reader.sequence = UINT_FAST64_MAX;                                                          \
                 for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {               \
-                        seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_SEQ_CST); \
+                        seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
                         if (seq < minimum_reader.sequence)                                                          \
                                 minimum_reader.sequence = seq;                                                      \
                 }                                                                                                   \
@@ -262,10 +262,10 @@ publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer
         uint_fast64_t seq;                                                                                    \
         cursor_t minimum_reader;                                                                              \
                                                                                                               \
-        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_SEQ_CST);      \
+        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);      \
         minimum_reader.sequence = UINT_FAST64_MAX;                                                            \
         for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                 \
-                seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_SEQ_CST);   \
+                seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_ACQUIRE);   \
                 if (seq < minimum_reader.sequence)                                                            \
                         minimum_reader.sequence = seq;                                                        \
         }                                                                                                     \
@@ -279,16 +279,16 @@ publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer
  * Publishers must call this function to commit the event to the event
  * processors. Blocks until the event has been committed.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__) \
-static inline void                                                                        \
-publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,          \
-                                    const cursor_t * const cursor)                        \
-{                                                                                         \
-        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                \
-                                                                                          \
-        while (ring_buffer->max_read_cursor.sequence != required_read_sequence)           \
-                YIELD();                                                                  \
-        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_SEQ_CST);  \
+#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                           \
+static inline void                                                                                                  \
+publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,                                    \
+                                    const cursor_t * const cursor)                                                  \
+{                                                                                                                   \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
+                                                                                                                    \
+        while (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE) != required_read_sequence) \
+                YIELD();                                                                                            \
+        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                            \
 }
 
 /*
@@ -296,17 +296,17 @@ publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,
  * processors. Returns 1 (one) if the event has been commited, 0
  * (zero) otherwise.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__) \
-static inline int                                                                            \
-publisher_port_commitEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,          \
-                                       const cursor_t * const cursor)                        \
-{                                                                                            \
-        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                   \
-                                                                                             \
-        if (ring_buffer->max_read_cursor.sequence != required_read_sequence)                 \
-                return 0;                                                                    \
-        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_SEQ_CST);     \
-        return 1;                                                                            \
+#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                     \
+static inline int                                                                                                \
+publisher_port_commitEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                              \
+                                       const cursor_t * const cursor)                                            \
+{                                                                                                                \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                       \
+                                                                                                                 \
+        if (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE) != required_read_sequence) \
+                return 0;                                                                                        \
+        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                         \
+        return 1;                                                                                                \
 }
 
 #endif //  DISRUPTORC_H

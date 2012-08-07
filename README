@@ -19,7 +19,5 @@ TODO:
 
 NOTES:
 
-* Using the __atomic* operations from GCC 4.7.1 onwards.
-
-* Uncomment the "CC=g++" line in configure.ac to get approximately 10%
-  more performance for free.
+* Now using the __atomic* operations as supported in GCC 4.7.1
+  onwards.
