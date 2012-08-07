@@ -54,7 +54,7 @@
 #define EVENT_BUFFER_SIZE (16)
 #define MAX_EVENT_PROCESSORS (2)
 
-DEFINE_EVENT_TYPE(uint64_t, event_t);
+DEFINE_EVENT_TYPE(uint_fast64_t, event_t);
 DEFINE_RING_BUFFER_TYPE(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, event_t, ring_buffer_t);
 DEFINE_RING_BUFFER_INIT(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, ring_buffer_t);
 DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
@@ -147,7 +147,7 @@ event_processor_thread(void *arg)
                                 goto out;
                         }
                 }
-		event_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
+                event_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
 
                 ++cursor_upper_limit.sequence;
                 cursor.sequence = cursor_upper_limit.sequence;
