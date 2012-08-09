@@ -132,23 +132,28 @@ get_index(const uint_fast64_t reduced_size, const cursor_t * const cursor)
  * array with the sequence number of the event that they are currently
  * processing.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__)                                                                                                                    \
-static inline void                                                                                                                                                                                   \
-event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                                                                                        \
-                                 count_t * const event_processor_number)                                                                                                                             \
-{                                                                                                                                                                                                    \
-        unsigned int n;                                                                                                                                                                              \
-        uint_fast64_t vacant = VACANT__;                                                                                                                                                             \
-                                                                                                                                                                                                     \
-        do {                                                                                                                                                                                         \
-                for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                                                                                                \
-                        if (__atomic_compare_exchange_n(&ring_buffer->event_processor_cursors[n].sequence, &vacant, ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) { \
-                                event_processor_number->count = n;                                                                                                                                   \
-                                return;                                                                                                                                                              \
-                        }                                                                                                                                                                            \
-                        vacant = VACANT__;                                                                                                                                                           \
-                }                                                                                                                                                                                    \
-        } while (1);                                                                                                                                                                                 \
+#define DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
+static inline void                                                                                                                 \
+event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                      \
+                                 count_t * const event_processor_number)                                                           \
+{                                                                                                                                  \
+        int n;                                                                                                                     \
+        uint_fast64_t vacant = VACANT__;                                                                                           \
+                                                                                                                                   \
+        do {                                                                                                                       \
+                for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                              \
+                        if (__atomic_compare_exchange_n(&ring_buffer->event_processor_cursors[n].sequence,                         \
+                                                        &vacant,                                                                   \
+                                                        __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE), \
+                                                        1,                                                                         \
+                                                        __ATOMIC_RELEASE,                                                          \
+                                                        __ATOMIC_RELAXED)) {                                                       \
+                                event_processor_number->count = n;                                                                 \
+                                return;                                                                                            \
+                        }                                                                                                          \
+                        vacant = VACANT__;                                                                                         \
+                }                                                                                                                  \
+        } while (1);                                                                                                               \
 }
 
 /*
@@ -159,9 +164,9 @@ event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,   
 #define DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
 static inline void                                                                                                                   \
 event_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer,                                                      \
-                                   count_t * const event_processor_number)                                                           \
+                                   const count_t * const event_processor_number)                                                     \
 {                                                                                                                                    \
-        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, VACANT__, __ATOMIC_RELEASE); \
+        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, VACANT__, __ATOMIC_RELAXED); \
 }
 
 
@@ -170,15 +175,15 @@ event_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer, 
  * array to know with which sequence number to begin. An exception is
  * if the sequence number is 0, then it must skip 0 and waitFor 1.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__)   \
-static inline void                                                                          \
-event_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const ring_buffer, \
-                                         cursor_t * const cursor)                           \
-{                                                                                           \
-        while (cursor->sequence > ring_buffer->max_read_cursor.sequence)                    \
-                YIELD();                                                                    \
-                                                                                            \
-        cursor->sequence = ring_buffer->max_read_cursor.sequence;                           \
+#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__)                    \
+static inline void                                                                                           \
+event_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const ring_buffer,                  \
+                                         cursor_t * const cursor)                                            \
+{                                                                                                            \
+        while (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)) \
+                YIELD();                                                                                     \
+                                                                                                             \
+        cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);        \
 }
 
 /*
@@ -186,17 +191,17 @@ event_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const r
  * array to know with which sequence number to begin. An exception is
  * if the sequence number is 0, then it must skip 0 and waitFor 1.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__)   \
-static inline int                                                                              \
-event_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * const ring_buffer, \
-                                            cursor_t * const cursor)                           \
-{                                                                                              \
-        if (cursor->sequence > ring_buffer->max_read_cursor.sequence)                          \
-                return 0;                                                                      \
-                                                                                               \
-        cursor->sequence = ring_buffer->max_read_cursor.sequence;                              \
-                                                                                               \
-        return 1;                                                                              \
+#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__)              \
+static inline int                                                                                         \
+event_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * const ring_buffer,            \
+                                            cursor_t * const cursor)                                      \
+{                                                                                                         \
+        if (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)) \
+                return 0;                                                                                 \
+                                                                                                          \
+        cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);     \
+                                                                                                          \
+        return 1;                                                                                         \
 }
 
 /*
@@ -220,11 +225,14 @@ event_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer
                                      const count_t * const event_processor_number,                                                           \
                                      const cursor_t * const cursor)                                                                          \
 {                                                                                                                                            \
-        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, cursor->sequence, __ATOMIC_RELEASE); \
+        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, cursor->sequence, __ATOMIC_RELAXED); \
 }
 
 /*
  * Publishers must call this function to get an event to write into.
+ * I have found that __ATOMIC_ACQUIRE is actually faster than
+ * __ATOMIC_RELAXED contrary to what I would expect. Mayby other event
+ * types will show otherwise.
  */
 #define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                             \
 static inline void                                                                                                  \
@@ -253,26 +261,26 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
 /*
  * Publishers must call this function to get an event to write into.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                    \
-static inline int                                                                                             \
-publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                             \
-                                     cursor_t * const  cursor)                                                \
-{                                                                                                             \
-        unsigned int n;                                                                                       \
-        uint_fast64_t seq;                                                                                    \
-        cursor_t minimum_reader;                                                                              \
-                                                                                                              \
-        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);      \
-        minimum_reader.sequence = UINT_FAST64_MAX;                                                            \
-        for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                 \
-                seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_ACQUIRE);   \
-                if (seq < minimum_reader.sequence)                                                            \
-                        minimum_reader.sequence = seq;                                                        \
-        }                                                                                                     \
-        if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)                 \
-            || (UINT_FAST64_MAX == minimum_reader.sequence))                                                  \
-                return 1;                                                                                     \
-        return 0;                                                                                             \
+#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                  \
+static inline int                                                                                           \
+publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                           \
+                                     cursor_t * const  cursor)                                              \
+{                                                                                                           \
+        unsigned int n;                                                                                     \
+        uint_fast64_t seq;                                                                                  \
+        cursor_t minimum_reader;                                                                            \
+                                                                                                            \
+        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);    \
+        minimum_reader.sequence = UINT_FAST64_MAX;                                                          \
+        for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {               \
+                seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
+                if (seq < minimum_reader.sequence)                                                          \
+                        minimum_reader.sequence = seq;                                                      \
+        }                                                                                                   \
+        if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)               \
+            || (UINT_FAST64_MAX == minimum_reader.sequence))                                                \
+                return 1;                                                                                   \
+        return 0;                                                                                           \
 }
 
 /*

@@ -142,14 +142,14 @@ main(int argc, char *argv[])
         double end_time;
         pthread_t thread_id; // consumer/event processor
         cursor_t cursor;
-        uint64_t reps = EVENTS_TO_GENERATE;
+        uint_fast64_t reps = EVENTS_TO_GENERATE;
 
         ring_buffer_init(&ring_buffer);
         if (!create_thread(&thread_id, &ring_buffer, event_processor_thread)) {
                 printf("could not create event processor thread\n");
                 return EXIT_FAILURE;
         }
-
+	
         gettimeofday(&start, NULL);
         do {
                 publisher_port_nextEntry_blocking(&ring_buffer, &cursor);
