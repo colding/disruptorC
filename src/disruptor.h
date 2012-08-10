@@ -89,29 +89,29 @@ typedef struct {
  *
  * entry_count__ MUST be a power of two.
  */
-#define DEFINE_RING_BUFFER_TYPE(entry_processor_count__, entry_count__, entry_type_name__, ring_buffer_type_name__) \
-    typedef struct {                                                                                                \
-            count_t reduced_size;                                                                                   \
-            VOLATILE cursor_t max_read_cursor;                                                                      \
-            VOLATILE cursor_t write_cursor;                                                                         \
-            VOLATILE cursor_t entry_processor_cursors[entry_processor_count__];                                     \
-            entry_type_name__ buffer[entry_count__];                                                                \
+#define DEFINE_RING_BUFFER_TYPE(entry_processor_capacity__, entry_capacity__, entry_type_name__, ring_buffer_type_name__) \
+    typedef struct {                                                                                                      \
+            count_t reduced_size;                                                                                         \
+            VOLATILE cursor_t max_read_cursor;                                                                            \
+            VOLATILE cursor_t write_cursor;                                                                               \
+            VOLATILE cursor_t entry_processor_cursors[entry_processor_capacity__];                                        \
+            entry_type_name__ buffer[entry_capacity__];                                                                   \
     } ring_buffer_type_name__
 
 /*
  * This function must always be invoked on a ring buffer before it is
  * put into use.
  */
-#define DEFINE_RING_BUFFER_INIT(entry_processor_count__, entry_count__, ring_buffer_type_name__) \
-static inline void                                                                               \
-ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                                    \
-{                                                                                                \
-        unsigned int n;                                                                          \
-                                                                                                 \
-        memset((void*)ring_buffer, 0, sizeof(ring_buffer_type_name__));                          \
-        for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n)      \
-                ring_buffer->entry_processor_cursors[n].sequence = VACANT__;                     \
-        __atomic_store_n(&ring_buffer->reduced_size.count, entry_count__ - 1, __ATOMIC_SEQ_CST); \
+#define DEFINE_RING_BUFFER_INIT(entry_capacity__, ring_buffer_type_name__)                          \
+static inline void                                                                                  \
+ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                                       \
+{                                                                                                   \
+        unsigned int n;                                                                             \
+                                                                                                    \
+        memset((void*)ring_buffer, 0, sizeof(ring_buffer_type_name__));                             \
+        for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n)         \
+                ring_buffer->entry_processor_cursors[n].sequence = VACANT__;                        \
+        __atomic_store_n(&ring_buffer->reduced_size.count, entry_capacity__ - 1, __ATOMIC_SEQ_CST); \
 }
 
 /*
@@ -137,7 +137,7 @@ static inline void                                                              
 entry_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                      \
                                  count_t * const entry_processor_number)                                                           \
 {                                                                                                                                  \
-        int n;                                                                                                                     \
+        unsigned int n;                                                                                                            \
         uint_fast64_t vacant = VACANT__;                                                                                           \
                                                                                                                                    \
         do {                                                                                                                       \
@@ -241,47 +241,21 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
 {                                                                                                                   \
         unsigned int n;                                                                                             \
         uint_fast64_t seq;                                                                                          \
-        cursor_t minimum_reader;                                                                                    \
+        uint_fast64_t slowest_reader;                                                                               \
                                                                                                                     \
-        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);            \
+        cursor->sequence = 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);        \
         do {                                                                                                        \
-                minimum_reader.sequence = UINT_FAST64_MAX;                                                          \
+                slowest_reader = UINT_FAST64_MAX;                                                                   \
                 for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {               \
                         seq = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
-                        if (seq < minimum_reader.sequence)                                                          \
-                                minimum_reader.sequence = seq;                                                      \
+                        if (seq < slowest_reader)                                                                   \
+                                slowest_reader = seq;                                                               \
                 }                                                                                                   \
-                if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)               \
-                    || (UINT_FAST64_MAX == minimum_reader.sequence))                                                \
+                if (((cursor->sequence - slowest_reader) <= ring_buffer->reduced_size.count)                        \
+                    || (UINT_FAST64_MAX == slowest_reader))                                                         \
                         return;                                                                                     \
                 YIELD();                                                                                            \
         } while (1);                                                                                                \
-}
-
-/*
- * Entry Publishers must call this function to get an entry to write
- * into.
- */
-#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                  \
-static inline int                                                                                           \
-publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                           \
-                                     cursor_t * const  cursor)                                              \
-{                                                                                                           \
-        unsigned int n;                                                                                     \
-        uint_fast64_t seq;                                                                                  \
-        cursor_t minimum_reader;                                                                            \
-                                                                                                            \
-        cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);    \
-        minimum_reader.sequence = UINT_FAST64_MAX;                                                          \
-        for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {               \
-                seq = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
-                if (seq < minimum_reader.sequence)                                                          \
-                        minimum_reader.sequence = seq;                                                      \
-        }                                                                                                   \
-        if (((cursor->sequence - minimum_reader.sequence) <= ring_buffer->reduced_size.count)               \
-            || (UINT_FAST64_MAX == minimum_reader.sequence))                                                \
-                return 1;                                                                                   \
-        return 0;                                                                                           \
 }
 
 /*

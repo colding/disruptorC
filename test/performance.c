@@ -35,7 +35,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "ac_config.h"
+    #include "ac_config.h"
 #endif
 
 #include <unistd.h>
@@ -56,7 +56,7 @@
 
 DEFINE_ENTRY_TYPE(uint_fast64_t, entry_t);
 DEFINE_RING_BUFFER_TYPE(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, entry_t, ring_buffer_t);
-DEFINE_RING_BUFFER_INIT(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, ring_buffer_t);
+DEFINE_RING_BUFFER_INIT(ENTRY_BUFFER_SIZE, ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
@@ -121,7 +121,7 @@ entry_processor_thread(void *arg)
                         if (STOP == entry->content)
                                 goto out;
                 }
-		entry_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
+                entry_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
 
                 ++cursor_upper_limit.sequence;
                 cursor.sequence = cursor_upper_limit.sequence;
@@ -149,7 +149,7 @@ main(int argc, char *argv[])
                 printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
         }
-	
+
         gettimeofday(&start, NULL);
         do {
                 publisher_port_nextEntry_blocking(&ring_buffer, &cursor);
