@@ -50,20 +50,20 @@
 #include "src/disruptor.h"
 
 #define STOP UINT64_MAX
-#define EVENTS_TO_GENERATE (400)
-#define EVENT_BUFFER_SIZE (16)
-#define MAX_EVENT_PROCESSORS (2)
+#define ENTRIES_TO_GENERATE (400)
+#define ENTRY_BUFFER_SIZE (16)
+#define MAX_ENTRY_PROCESSORS (2)
 
-DEFINE_EVENT_TYPE(uint_fast64_t, event_t);
-DEFINE_RING_BUFFER_TYPE(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, event_t, ring_buffer_t);
-DEFINE_RING_BUFFER_INIT(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_GETENTRY_FUNCTION(event_t, ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_TYPE(uint_fast64_t, entry_t);
+DEFINE_RING_BUFFER_TYPE(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, entry_t, ring_buffer_t);
+DEFINE_RING_BUFFER_INIT(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_GETENTRY_FUNCTION(entry_t, ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 ring_buffer_t ring_buffer;
 
@@ -92,11 +92,11 @@ err:
 }
 
 static void*
-event_publisher_thread(void *arg)
+entry_publisher_thread(void *arg)
 {
         ring_buffer_t *buffer = (ring_buffer_t*)arg;
         cursor_t cursor;
-        uint64_t reps = EVENTS_TO_GENERATE;
+        uint64_t reps = ENTRIES_TO_GENERATE;
 
         do {
                 publisher_port_nextEntry_blocking(buffer, &cursor);
@@ -113,48 +113,48 @@ event_publisher_thread(void *arg)
 }
 
 static void*
-event_processor_thread(void *arg)
+entry_processor_thread(void *arg)
 {
         cursor_t n;
         ring_buffer_t *buffer = (ring_buffer_t*)arg;
         cursor_t cursor;
         cursor_t cursor_upper_limit;
         count_t reg_number;
-        const event_t *event;
+        const entry_t *entry;
 
-        // register and setup event processor
+        // register and setup entry processor
         cursor.sequence = 0;
-        event_processor_barrier_register(buffer, &reg_number);
+        entry_processor_barrier_register(buffer, &reg_number);
 
-        // initialize event processing
-        cursor.sequence = buffer->event_processor_cursors[reg_number.count].sequence;
+        // initialize entry processing
+        cursor.sequence = buffer->entry_processor_cursors[reg_number.count].sequence;
         if (!cursor.sequence)
                 cursor.sequence = 1;
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
-                event_processor_barrier_waitFor_blocking(buffer, &cursor_upper_limit);
+                entry_processor_barrier_waitFor_blocking(buffer, &cursor_upper_limit);
                 for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { // batching
 
-                        event = event_processor_barrier_getEntry(buffer, &n);
-                        if (STOP == event->content) {
-                                printf("Event processor exiting normally\n");
+                        entry = entry_processor_barrier_getEntry(buffer, &n);
+                        if (STOP == entry->content) {
+                                printf("Entry processor exiting normally\n");
                                 goto out;
                         }
 
-                        if (event->content != n.sequence) {
-                                printf("Event processor - ERROR\n");
+                        if (entry->content != n.sequence) {
+                                printf("Entry processor - ERROR\n");
                                 goto out;
                         }
                 }
-                event_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
+                entry_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
 
                 ++cursor_upper_limit.sequence;
                 cursor.sequence = cursor_upper_limit.sequence;
         } while (1);
 out:
-        event_processor_barrier_unregister(buffer, &reg_number);
-        printf("Event processor done\n");
+        entry_processor_barrier_unregister(buffer, &reg_number);
+        printf("Entry processor done\n");
 
         return NULL;
 }
@@ -162,27 +162,27 @@ out:
 int
 main(int argc, char *argv[])
 {
-        pthread_t p_1; // event publisher
+        pthread_t p_1; // entry publisher
         pthread_t p_2;
         pthread_t p_3;
-        pthread_t c_1; // consumer/event processor
+        pthread_t c_1; // entry processor
         pthread_t c_2;
 
         ring_buffer_init(&ring_buffer);
 
-        create_thread(&c_1, &ring_buffer, event_processor_thread);
-        create_thread(&c_2, &ring_buffer, event_processor_thread);
+        create_thread(&c_1, &ring_buffer, entry_processor_thread);
+        create_thread(&c_2, &ring_buffer, entry_processor_thread);
         sleep(1);
-        create_thread(&p_1, &ring_buffer, event_publisher_thread);
-        create_thread(&p_2, &ring_buffer, event_publisher_thread);
-        create_thread(&p_3, &ring_buffer, event_publisher_thread);
+        create_thread(&p_1, &ring_buffer, entry_publisher_thread);
+        create_thread(&p_2, &ring_buffer, entry_publisher_thread);
+        create_thread(&p_3, &ring_buffer, entry_publisher_thread);
 
-        // join event publishers
+        // join entry publishers
         pthread_join(p_1, NULL);
         pthread_join(p_2, NULL);
         pthread_join(p_3, NULL);
 
-        // join event processors
+        // join entry processors
         pthread_join(c_1, NULL);
         pthread_join(c_2, NULL);
 

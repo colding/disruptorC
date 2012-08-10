@@ -50,7 +50,7 @@
 #endif
 
 /*
- * An event processor cursor spot that has this value is not used and
+ * An entry processor cursor spot that has this value is not used and
  * thereby vacant.
  */
 #define VACANT__ (UINT_FAST64_MAX)
@@ -74,44 +74,44 @@ typedef struct {
 /*
  * Cacheline padded elements of ring.
  */
-#define DEFINE_EVENT_TYPE(content_type__, event_type_name__)                                                            \
+#define DEFINE_ENTRY_TYPE(content_type__, entry_type_name__)                                                            \
     typedef struct {                                                                                                    \
             content_type__ content;                                                                                     \
             uint8_t padding[(CACHE_LINE_SIZE > sizeof(content_type__)) ? CACHE_LINE_SIZE - sizeof(content_type__) : 0]; \
-    } event_type_name__ __attribute__((aligned(CACHE_LINE_SIZE)))
+    } entry_type_name__ __attribute__((aligned(CACHE_LINE_SIZE)))
 
 /*
- * Event processors may read up to and including max_read_cursor, but
+ * Entry processors may read up to and including max_read_cursor, but
  * no futher.
  *
- * Event publishers may write from (but excluding) max_read_cursor and
+ * Entry Publishers may write from (but excluding) max_read_cursor and
  * up to and including max_write_cursor, but no futher.
  *
- * event_count__ MUST be a power of two.
+ * entry_count__ MUST be a power of two.
  */
-#define DEFINE_RING_BUFFER_TYPE(event_processor_count__, event_count__, event_type_name__, ring_buffer_type_name__) \
+#define DEFINE_RING_BUFFER_TYPE(entry_processor_count__, entry_count__, entry_type_name__, ring_buffer_type_name__) \
     typedef struct {                                                                                                \
             count_t reduced_size;                                                                                   \
             VOLATILE cursor_t max_read_cursor;                                                                      \
             VOLATILE cursor_t write_cursor;                                                                         \
-            VOLATILE cursor_t event_processor_cursors[event_processor_count__];                                     \
-            event_type_name__ buffer[event_count__];                                                                \
+            VOLATILE cursor_t entry_processor_cursors[entry_processor_count__];                                     \
+            entry_type_name__ buffer[entry_count__];                                                                \
     } ring_buffer_type_name__
 
 /*
  * This function must always be invoked on a ring buffer before it is
  * put into use.
  */
-#define DEFINE_RING_BUFFER_INIT(event_processor_count__, event_count__, ring_buffer_type_name__) \
+#define DEFINE_RING_BUFFER_INIT(entry_processor_count__, entry_count__, ring_buffer_type_name__) \
 static inline void                                                                               \
 ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                                    \
 {                                                                                                \
         unsigned int n;                                                                          \
                                                                                                  \
         memset((void*)ring_buffer, 0, sizeof(ring_buffer_type_name__));                          \
-        for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n)      \
-                ring_buffer->event_processor_cursors[n].sequence = VACANT__;                     \
-        __atomic_store_n(&ring_buffer->reduced_size.count, event_count__ - 1, __ATOMIC_SEQ_CST); \
+        for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n)      \
+                ring_buffer->entry_processor_cursors[n].sequence = VACANT__;                     \
+        __atomic_store_n(&ring_buffer->reduced_size.count, entry_count__ - 1, __ATOMIC_SEQ_CST); \
 }
 
 /*
@@ -125,30 +125,30 @@ get_index(const uint_fast64_t reduced_size, const cursor_t * const cursor)
 }
 
 /*
- * EventProcessors must register before starting to process events.
+ * Entry Processors must register before starting to process entries.
  *
  * They must furthermore update their spot, as identified by the
- * number returned when registering, in the event_processor_cursors
- * array with the sequence number of the event that they are currently
+ * number returned when registering, in the entry_processor_cursors
+ * array with the sequence number of the entry that they are currently
  * processing.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
 static inline void                                                                                                                 \
-event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                      \
-                                 count_t * const event_processor_number)                                                           \
+entry_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                      \
+                                 count_t * const entry_processor_number)                                                           \
 {                                                                                                                                  \
         int n;                                                                                                                     \
         uint_fast64_t vacant = VACANT__;                                                                                           \
                                                                                                                                    \
         do {                                                                                                                       \
-                for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {                              \
-                        if (__atomic_compare_exchange_n(&ring_buffer->event_processor_cursors[n].sequence,                         \
+                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {                              \
+                        if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                         \
                                                         &vacant,                                                                   \
                                                         __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE), \
                                                         1,                                                                         \
                                                         __ATOMIC_RELEASE,                                                          \
                                                         __ATOMIC_RELAXED)) {                                                       \
-                                event_processor_number->count = n;                                                                 \
+                                entry_processor_number->count = n;                                                                 \
                                 return;                                                                                            \
                         }                                                                                                          \
                         vacant = VACANT__;                                                                                         \
@@ -157,27 +157,27 @@ event_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,   
 }
 
 /*
- * EventProcessors must unregister to free up their spot in the event
+ * Entry Processors must unregister to free up their spot in the entry
  * processor array in the ring buffer, so that other processors can
  * hook on.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
 static inline void                                                                                                                   \
-event_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer,                                                      \
-                                   const count_t * const event_processor_number)                                                     \
+entry_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer,                                                      \
+                                   const count_t * const entry_processor_number)                                                     \
 {                                                                                                                                    \
-        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, VACANT__, __ATOMIC_RELAXED); \
+        __atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, VACANT__, __ATOMIC_RELAXED); \
 }
 
 
 /*
- * EventProcessors must read their spot in the event_processor_cursors
+ * Entry Processors must read their spot in the entry_processor_cursors
  * array to know with which sequence number to begin. An exception is
  * if the sequence number is 0, then it must skip 0 and waitFor 1.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__)                    \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__)                    \
 static inline void                                                                                           \
-event_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const ring_buffer,                  \
+entry_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const ring_buffer,                  \
                                          cursor_t * const cursor)                                            \
 {                                                                                                            \
         while (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)) \
@@ -187,13 +187,13 @@ event_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const r
 }
 
 /*
- * EventProcessors must read their spot in the event_processor_cursors
+ * Entry Processors must read their spot in the entry_processor_cursors
  * array to know with which sequence number to begin. An exception is
  * if the sequence number is 0, then it must skip 0 and waitFor 1.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__)              \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__)              \
 static inline int                                                                                         \
-event_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * const ring_buffer,            \
+entry_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * const ring_buffer,            \
                                             cursor_t * const cursor)                                      \
 {                                                                                                         \
         if (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)) \
@@ -205,36 +205,36 @@ event_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * cons
 }
 
 /*
- * This function returns a pointer to an event in the ring buffer.
+ * This function returns a pointer to an entry in the ring buffer.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_GETENTRY_FUNCTION(event_type_name__, ring_buffer_type_name__) \
-static inline const event_type_name__*                                                               \
-event_processor_barrier_getEntry(const ring_buffer_type_name__ * const ring_buffer,                  \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_GETENTRY_FUNCTION(entry_type_name__, ring_buffer_type_name__) \
+static inline const entry_type_name__*                                                               \
+entry_processor_barrier_getEntry(const ring_buffer_type_name__ * const ring_buffer,                  \
                                  const cursor_t * const cursor)                                      \
 {                                                                                                    \
         return &ring_buffer->buffer[get_index(ring_buffer->reduced_size.count, cursor)];             \
 }
 
 /*
- * EventProcessors must tell the ring buffer how far they are done
- * reading the events.
+ * Entry Processors must tell the ring buffer how far they are done
+ * reading the entries.
  */
-#define DEFINE_EVENT_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_type_name__)                                                        \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_type_name__)                                                        \
 static inline void                                                                                                                           \
-event_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer,                                                            \
-                                     const count_t * const event_processor_number,                                                           \
+entry_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer,                                                            \
+                                     const count_t * const entry_processor_number,                                                           \
                                      const cursor_t * const cursor)                                                                          \
 {                                                                                                                                            \
-        __atomic_store_n(&ring_buffer->event_processor_cursors[event_processor_number->count].sequence, cursor->sequence, __ATOMIC_RELAXED); \
+        __atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, cursor->sequence, __ATOMIC_RELAXED); \
 }
 
 /*
- * Publishers must call this function to get an event to write into.
- * I have found that __ATOMIC_ACQUIRE is actually faster than
- * __ATOMIC_RELAXED contrary to what I would expect. Mayby other event
- * types will show otherwise.
+ * Entry Publishers must call this function to get an entry to write
+ * into.  I have found that __ATOMIC_ACQUIRE (in the __atomic_load_n)
+ * is actually faster than __ATOMIC_RELAXED contrary to what I would
+ * expect. Mayby other entry types will show otherwise.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                             \
+#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                             \
 static inline void                                                                                                  \
 publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,                                      \
                                   cursor_t * const  cursor)                                                         \
@@ -246,8 +246,8 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
         cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);            \
         do {                                                                                                        \
                 minimum_reader.sequence = UINT_FAST64_MAX;                                                          \
-                for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {               \
-                        seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
+                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {               \
+                        seq = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
                         if (seq < minimum_reader.sequence)                                                          \
                                 minimum_reader.sequence = seq;                                                      \
                 }                                                                                                   \
@@ -259,9 +259,10 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
 }
 
 /*
- * Publishers must call this function to get an event to write into.
+ * Entry Publishers must call this function to get an entry to write
+ * into.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                  \
+#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                  \
 static inline int                                                                                           \
 publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                           \
                                      cursor_t * const  cursor)                                              \
@@ -272,8 +273,8 @@ publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer
                                                                                                             \
         cursor->sequence = __atomic_add_fetch(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);    \
         minimum_reader.sequence = UINT_FAST64_MAX;                                                          \
-        for (n = 0; n < sizeof(ring_buffer->event_processor_cursors)/sizeof(cursor_t); ++n) {               \
-                seq = __atomic_load_n(&ring_buffer->event_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
+        for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {               \
+                seq = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
                 if (seq < minimum_reader.sequence)                                                          \
                         minimum_reader.sequence = seq;                                                      \
         }                                                                                                   \
@@ -284,10 +285,10 @@ publisher_port_nextEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer
 }
 
 /*
- * Publishers must call this function to commit the event to the event
- * processors. Blocks until the event has been committed.
+ * Entry Publishers must call this function to commit the entry to the
+ * entry processors. Blocks until the entry has been committed.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                           \
+#define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                           \
 static inline void                                                                                                  \
 publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,                                    \
                                     const cursor_t * const cursor)                                                  \
@@ -300,11 +301,11 @@ publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,
 }
 
 /*
- * Publishers must call this function to commit the event to the event
- * processors. Returns 1 (one) if the event has been commited, 0
+ * Entry Publishers must call this function to commit the entry to the
+ * entry processors. Returns 1 (one) if the entry has been commited, 0
  * (zero) otherwise.
  */
-#define DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                     \
+#define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                     \
 static inline int                                                                                                \
 publisher_port_commitEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                              \
                                        const cursor_t * const cursor)                                            \

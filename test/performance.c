@@ -50,20 +50,20 @@
 #include "src/disruptor.h"
 
 #define STOP UINT_FAST64_MAX
-#define EVENTS_TO_GENERATE (50 * 1000 * 1000)
-#define EVENT_BUFFER_SIZE (1024*8) // must be a power of two
-#define MAX_EVENT_PROCESSORS (1)
+#define ENTRIES_TO_GENERATE (50 * 1000 * 1000)
+#define ENTRY_BUFFER_SIZE (1024*8) // must be a power of two
+#define MAX_ENTRY_PROCESSORS (1)
 
-DEFINE_EVENT_TYPE(uint_fast64_t, event_t);
-DEFINE_RING_BUFFER_TYPE(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, event_t, ring_buffer_t);
-DEFINE_RING_BUFFER_INIT(MAX_EVENT_PROCESSORS, EVENT_BUFFER_SIZE, ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_GETENTRY_FUNCTION(event_t, ring_buffer_t);
-DEFINE_EVENT_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_EVENT_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_TYPE(uint_fast64_t, entry_t);
+DEFINE_RING_BUFFER_TYPE(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, entry_t, ring_buffer_t);
+DEFINE_RING_BUFFER_INIT(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_GETENTRY_FUNCTION(entry_t, ring_buffer_t);
+DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 ring_buffer_t ring_buffer;
 struct timeval start;
@@ -94,34 +94,34 @@ err:
 }
 
 static void*
-event_processor_thread(void *arg)
+entry_processor_thread(void *arg)
 {
         cursor_t n;
         ring_buffer_t *buffer = (ring_buffer_t*)arg;
         cursor_t cursor;
         cursor_t cursor_upper_limit;
         count_t reg_number;
-        const event_t *event;
+        const entry_t *entry;
 
-        // register and setup event processor
+        // register and setup entry processor
         cursor.sequence = 0;
-        event_processor_barrier_register(buffer, &reg_number);
+        entry_processor_barrier_register(buffer, &reg_number);
 
-        // initialize event processing
-        cursor.sequence = buffer->event_processor_cursors[reg_number.count].sequence;
+        // initialize entry processing
+        cursor.sequence = buffer->entry_processor_cursors[reg_number.count].sequence;
         if (!cursor.sequence)
                 cursor.sequence = 1;
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
-                event_processor_barrier_waitFor_blocking(buffer, &cursor_upper_limit);
+                entry_processor_barrier_waitFor_blocking(buffer, &cursor_upper_limit);
                 for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { // batching
 
-                        event = event_processor_barrier_getEntry(buffer, &n);
-                        if (STOP == event->content)
+                        entry = entry_processor_barrier_getEntry(buffer, &n);
+                        if (STOP == entry->content)
                                 goto out;
                 }
-		event_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
+		entry_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
 
                 ++cursor_upper_limit.sequence;
                 cursor.sequence = cursor_upper_limit.sequence;
@@ -129,8 +129,8 @@ event_processor_thread(void *arg)
 out:
         gettimeofday(&end, NULL);
 
-        event_processor_barrier_unregister(buffer, &reg_number);
-        printf("Event processor done\n");
+        entry_processor_barrier_unregister(buffer, &reg_number);
+        printf("Entry processor done\n");
 
         return NULL;
 }
@@ -140,13 +140,13 @@ main(int argc, char *argv[])
 {
         double start_time;
         double end_time;
-        pthread_t thread_id; // consumer/event processor
+        pthread_t thread_id; // consumer/entry processor
         cursor_t cursor;
-        uint_fast64_t reps = EVENTS_TO_GENERATE;
+        uint_fast64_t reps = ENTRIES_TO_GENERATE;
 
         ring_buffer_init(&ring_buffer);
-        if (!create_thread(&thread_id, &ring_buffer, event_processor_thread)) {
-                printf("could not create event processor thread\n");
+        if (!create_thread(&thread_id, &ring_buffer, entry_processor_thread)) {
+                printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
         }
 	
@@ -162,14 +162,14 @@ main(int argc, char *argv[])
         publisher_port_commitEntry_blocking(&ring_buffer, &cursor);
         printf("Publisher done\n");
 
-        // join event processor
+        // join entry processor
         pthread_join(thread_id, NULL);
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
 
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
-        printf("Events per second %lf\n", (double)EVENTS_TO_GENERATE/(end_time - start_time));
+        printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
 
         return EXIT_SUCCESS;
 }
