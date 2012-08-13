@@ -200,7 +200,6 @@ entry_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * cons
                 return 0;                                                                                 \
                                                                                                           \
         cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);     \
-                                                                                                          \
         return 1;                                                                                         \
 }
 
@@ -245,14 +244,14 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
                                                                                                                     \
         cursor->sequence = 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);        \
         do {                                                                                                        \
-                slowest_reader = UINT_FAST64_MAX;                                                                   \
+                slowest_reader = VACANT__;                                                                          \
                 for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {               \
                         seq = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
                         if (seq < slowest_reader)                                                                   \
                                 slowest_reader = seq;                                                               \
                 }                                                                                                   \
                 if (((cursor->sequence - slowest_reader) <= ring_buffer->reduced_size.count)                        \
-                    || (UINT_FAST64_MAX == slowest_reader))                                                         \
+                    || (VACANT__ == slowest_reader))                                                                \
                         return;                                                                                     \
                 YIELD();                                                                                            \
         } while (1);                                                                                                \
@@ -288,6 +287,7 @@ publisher_port_commitEntry_nonblocking(ring_buffer_type_name__ * const ring_buff
                                                                                                                  \
         if (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE) != required_read_sequence) \
                 return 0;                                                                                        \
+                                                                                                                 \
         __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                         \
         return 1;                                                                                                \
 }
