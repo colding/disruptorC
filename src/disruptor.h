@@ -251,7 +251,7 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
                         if (seq < slowest_reader)                                                                   \
                                 slowest_reader = seq;                                                               \
                 }                                                                                                   \
-                if (((cursor->sequence - slowest_reader) < ring_buffer->reduced_size.count)                         \
+                if (((cursor->sequence - slowest_reader) <= ring_buffer->reduced_size.count)                        \
                     || (UINT_FAST64_MAX == slowest_reader))                                                         \
                         return;                                                                                     \
                 YIELD();                                                                                            \
