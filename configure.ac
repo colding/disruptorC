@@ -53,6 +53,29 @@ AC_CHECK_FUNCS([malloc memset])
 # Check implementation details of build host
 #
 
+# Check for __atomic* builtins
+AC_MSG_CHECKING([for __atomic builtins])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[
+
+  		]],
+  		[[
+			int n = 1;
+			int m = 0;
+			m = __atomic_fetch_add(&n, 1, __ATOMIC_SEQ_CST);
+  		]]
+  	)],
+  	[
+		AC_MSG_RESULT([yes])
+		AC_DEFINE([HAVE_ATOMIC_BUILTINS], [1], [the compiler supports __atomic builtins])
+	],
+  	[
+		AC_MSG_RESULT([no])
+		AC_MSG_FAILURE([compiler support for __atomic builtins are required])
+	]
+)
+
 AC_MSG_CHECKING([for cache line size])
 AC_RUN_IFELSE(
 	[AC_LANG_PROGRAM(
