@@ -213,9 +213,6 @@ dnl
 if test "x$target" = "xDarwin"; then
 	LDFLAGS="-flat_namespace $LDFLAGS"
 fi
-if test "x$enable_debug" = "xyes"; then
-	LDFLAGS="-rdynamic $LDFLAGS"
-fi
 LDFLAGS="-L$DISRUPTORC_top_dir/ $LDFLAGS"
 AC_SUBST(LDFLAGS)
 

@@ -115,13 +115,36 @@ ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                   
 }
 
 /*
- * Using that A % B = A & (B - 1), iff B = 2^n for some n. Therefore,
- * reduced_size is the actual size minus 1.
+ * This function returns a const pointer to an entry in the ring
+ * buffer.
+ *
+ * We are using that A % B = A & (B - 1), iff B = 2^n for some n, to
+ * get the index in the ring buffer corresponding to the cursor.
+ *
+ * This is the reason behind the requirement that the size of the ring
+ * buffer MUST be a power of two, and is why the reduced_size is the
+ * actual size minus 1.
  */
-static inline uint_fast64_t
-get_index(const uint_fast64_t reduced_size, const cursor_t * const cursor)
-{
-        return (cursor->sequence & reduced_size);
+#define DEFINE_RING_BUFFER_SHOW_ENTRY_FUNCTION(entry_type_name__, ring_buffer_type_name__) \
+static inline const entry_type_name__*                                                     \
+ring_buffer_showEntry(const ring_buffer_type_name__ * const ring_buffer,                   \
+                      const cursor_t * const cursor)                                       \
+{                                                                                          \
+        return &ring_buffer->buffer[ring_buffer->reduced_size.count & cursor->sequence];   \
+}
+
+/*
+ * This function returns a non-const pointer to an entry in the ring
+ * buffer.
+ *
+ * See above for the implementation details.
+ */
+#define DEFINE_RING_BUFFER_ACQUIRE_ENTRY_FUNCTION(entry_type_name__, ring_buffer_type_name__) \
+static inline entry_type_name__*                                                              \
+ring_buffer_acquireEntry(ring_buffer_type_name__ * const ring_buffer,                         \
+                         const cursor_t * const cursor)                                       \
+{                                                                                             \
+        return &ring_buffer->buffer[ring_buffer->reduced_size.count & cursor->sequence];      \
 }
 
 /*
@@ -201,17 +224,6 @@ entry_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * cons
                                                                                                           \
         cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);     \
         return 1;                                                                                         \
-}
-
-/*
- * This function returns a pointer to an entry in the ring buffer.
- */
-#define DEFINE_ENTRY_PROCESSOR_BARRIER_GETENTRY_FUNCTION(entry_type_name__, ring_buffer_type_name__) \
-static inline const entry_type_name__*                                                               \
-entry_processor_barrier_getEntry(const ring_buffer_type_name__ * const ring_buffer,                  \
-                                 const cursor_t * const cursor)                                      \
-{                                                                                                    \
-        return &ring_buffer->buffer[get_index(ring_buffer->reduced_size.count, cursor)];             \
 }
 
 /*
