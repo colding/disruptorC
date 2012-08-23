@@ -56,6 +56,7 @@
 
 DEFINE_ENTRY_TYPE(uint_fast64_t, entry_t);
 DEFINE_RING_BUFFER_TYPE(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, entry_t, ring_buffer_t);
+DEFINE_RING_BUFFER_MALLOC(ring_buffer_t);
 DEFINE_RING_BUFFER_INIT(ENTRY_BUFFER_SIZE, ring_buffer_t);
 DEFINE_RING_BUFFER_SHOW_ENTRY_FUNCTION(entry_t, ring_buffer_t);
 DEFINE_RING_BUFFER_ACQUIRE_ENTRY_FUNCTION(entry_t, ring_buffer_t);
@@ -144,8 +145,19 @@ main(int argc, char *argv[])
         cursor_t cursor;
         entry_t *entry;
         uint_fast64_t reps = ENTRIES_TO_GENERATE;
+	ring_buffer_t *ring_buffer_heap;
 
+	ring_buffer_heap = ring_buffer_malloc();
+	if (!ring_buffer_heap) {
+		printf("Malloc ring buffer - ERROR\n");
+		return EXIT_FAILURE;
+	}
+        ring_buffer_init(ring_buffer_heap);
         ring_buffer_init(&ring_buffer);
+
+	//
+	// first as a global variable
+	//
         if (!create_thread(&thread_id, &ring_buffer, entry_processor_thread)) {
                 printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
@@ -173,6 +185,40 @@ main(int argc, char *argv[])
 
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
+	printf("As-Global-Variable test done\n\n");
+
+	//
+	// Now as allocated on the heap
+	//
+        if (!create_thread(&thread_id, ring_buffer_heap, entry_processor_thread)) {
+                printf("could not create entry processor thread\n");
+                return EXIT_FAILURE;
+        }
+
+	reps = ENTRIES_TO_GENERATE;
+        gettimeofday(&start, NULL);
+        do {
+                publisher_port_nextEntry_blocking(ring_buffer_heap, &cursor);
+                entry = ring_buffer_acquireEntry(ring_buffer_heap, &cursor);
+                entry->content = cursor.sequence;
+                publisher_port_commitEntry_blocking(ring_buffer_heap, &cursor);
+        } while (--reps);
+
+        publisher_port_nextEntry_blocking(ring_buffer_heap, &cursor);
+        entry = ring_buffer_acquireEntry(ring_buffer_heap, &cursor);
+        entry->content = STOP;
+        publisher_port_commitEntry_blocking(ring_buffer_heap, &cursor);
+        printf("Publisher done\n");
+
+        // join entry processor
+        pthread_join(thread_id, NULL);
+
+        start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
+        end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
+
+        printf("Elapsed time = %lf seconds\n", end_time - start_time);
+        printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
+	printf("On-The-Heap test done\n");
 
         return EXIT_SUCCESS;
 }

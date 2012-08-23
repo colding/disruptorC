@@ -56,6 +56,7 @@
 
 DEFINE_ENTRY_TYPE(uint_fast64_t, entry_t);
 DEFINE_RING_BUFFER_TYPE(MAX_ENTRY_PROCESSORS, ENTRY_BUFFER_SIZE, entry_t, ring_buffer_t);
+DEFINE_RING_BUFFER_MALLOC(ring_buffer_t);
 DEFINE_RING_BUFFER_INIT(ENTRY_BUFFER_SIZE, ring_buffer_t);
 DEFINE_RING_BUFFER_SHOW_ENTRY_FUNCTION(entry_t, ring_buffer_t);
 DEFINE_RING_BUFFER_ACQUIRE_ENTRY_FUNCTION(entry_t, ring_buffer_t);
@@ -102,13 +103,13 @@ entry_publisher_thread(void *arg)
 
         do {
                 publisher_port_nextEntry_blocking(buffer, &cursor);
-                entry = ring_buffer_acquireEntry(&ring_buffer, &cursor);
+                entry = ring_buffer_acquireEntry(buffer, &cursor);
                 entry->content = cursor.sequence;
                 publisher_port_commitEntry_blocking(buffer, &cursor);
         } while (--reps);
 
         publisher_port_nextEntry_blocking(buffer, &cursor);
-        entry = ring_buffer_acquireEntry(&ring_buffer, &cursor);
+        entry = ring_buffer_acquireEntry(buffer, &cursor);
         entry->content = STOP;
         publisher_port_commitEntry_blocking(buffer, &cursor);
         printf("Publisher done\n");
@@ -170,9 +171,19 @@ main(int argc, char *argv[])
         pthread_t p_3;
         pthread_t c_1; // entry processor
         pthread_t c_2;
+	ring_buffer_t *ring_buffer_heap;
 
+	ring_buffer_heap = ring_buffer_malloc();
+	if (!ring_buffer_heap) {
+		printf("Malloc ring buffer - ERROR\n");
+		return EXIT_FAILURE;
+	}
+        ring_buffer_init(ring_buffer_heap);
         ring_buffer_init(&ring_buffer);
 
+	//
+	// first as a global variable
+	//
         create_thread(&c_1, &ring_buffer, entry_processor_thread);
         create_thread(&c_2, &ring_buffer, entry_processor_thread);
         sleep(1);
@@ -188,6 +199,28 @@ main(int argc, char *argv[])
         // join entry processors
         pthread_join(c_1, NULL);
         pthread_join(c_2, NULL);
+	printf("As-Global-Variable test done\n\n");
 
-        return 0;
+	//
+	// Now as allocated on the heap
+	//
+        create_thread(&c_1, ring_buffer_heap, entry_processor_thread);
+        create_thread(&c_2, ring_buffer_heap, entry_processor_thread);
+        sleep(1);
+        create_thread(&p_1, ring_buffer_heap, entry_publisher_thread);
+        create_thread(&p_2, ring_buffer_heap, entry_publisher_thread);
+        create_thread(&p_3, ring_buffer_heap, entry_publisher_thread);
+
+        // join entry publishers
+        pthread_join(p_1, NULL);
+        pthread_join(p_2, NULL);
+        pthread_join(p_3, NULL);
+
+        // join entry processors
+        pthread_join(c_1, NULL);
+        pthread_join(c_2, NULL);
+	free(ring_buffer_heap);
+	printf("On-The-Heap test done\n");
+
+        return EXIT_SUCCESS;
 }

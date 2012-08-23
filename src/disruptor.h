@@ -40,6 +40,7 @@
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
+#include <limits.h>
 #include <inttypes.h>
 
 #ifndef YIELD
@@ -54,6 +55,25 @@
  * thereby vacant.
  */
 #define VACANT__ (UINT_FAST64_MAX)
+
+/*
+ * Will return k iff k is a power of two, or the next power of two
+ * which is greater than k.
+ */
+static inline size_t
+next_power_of_two(size_t k) 
+{
+        size_t i;
+
+        if (!k)
+                return 1;
+
+        --k;
+        for (i = 1; i < sizeof(size_t)*CHAR_BIT; i <<= 1)
+                k = k | k >> i;
+
+        return ++k;
+}
 
 /*
  * Cacheline padded counter.
@@ -84,10 +104,10 @@ typedef struct {
  * Entry processors may read up to and including max_read_cursor, but
  * no futher.
  *
- * Entry Publishers may write from (but excluding) max_read_cursor and
+ * Entry publishers may write from (but excluding) max_read_cursor and
  * up to and including max_write_cursor, but no futher.
  *
- * entry_count__ MUST be a power of two.
+ * entry_capacity__ MUST be a power of two.
  */
 #define DEFINE_RING_BUFFER_TYPE(entry_processor_capacity__, entry_capacity__, entry_type_name__, ring_buffer_type_name__) \
     typedef struct {                                                                                                      \
@@ -97,6 +117,21 @@ typedef struct {
             VOLATILE cursor_t entry_processor_cursors[entry_processor_capacity__];                                        \
             entry_type_name__ buffer[entry_capacity__];                                                                   \
     } ring_buffer_type_name__
+
+/*
+ * This function returns a properly aligned ring buffer or NULL.
+ */
+#define DEFINE_RING_BUFFER_MALLOC(ring_buffer_type_name__)                        \
+static inline ring_buffer_type_name__ *                                           \
+ring_buffer_malloc(void)                                                          \
+{                                                                                 \
+        ring_buffer_type_name__ *retv = NULL;                                     \
+        const size_t alignment = next_power_of_two(CACHE_LINE_SIZE);              \
+                                                                                  \
+        posix_memalign((void*)&retv, alignment, sizeof(ring_buffer_type_name__)); \
+                                                                                  \
+        return retv;                                                              \
+}
 
 /*
  * This function must always be invoked on a ring buffer before it is
