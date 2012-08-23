@@ -171,19 +171,19 @@ main(int argc, char *argv[])
         pthread_t p_3;
         pthread_t c_1; // entry processor
         pthread_t c_2;
-	ring_buffer_t *ring_buffer_heap;
+        ring_buffer_t *ring_buffer_heap;
 
-	ring_buffer_heap = ring_buffer_malloc();
-	if (!ring_buffer_heap) {
-		printf("Malloc ring buffer - ERROR\n");
-		return EXIT_FAILURE;
-	}
+        ring_buffer_heap = ring_buffer_malloc();
+        if (!ring_buffer_heap) {
+                printf("Malloc ring buffer - ERROR\n");
+                return EXIT_FAILURE;
+        }
         ring_buffer_init(ring_buffer_heap);
         ring_buffer_init(&ring_buffer);
 
-	//
-	// first as a global variable
-	//
+        //
+        // first as a global variable
+        //
         create_thread(&c_1, &ring_buffer, entry_processor_thread);
         create_thread(&c_2, &ring_buffer, entry_processor_thread);
         sleep(1);
@@ -199,11 +199,11 @@ main(int argc, char *argv[])
         // join entry processors
         pthread_join(c_1, NULL);
         pthread_join(c_2, NULL);
-	printf("As-Global-Variable test done\n\n");
+        printf("As-Global-Variable test done\n\n");
 
-	//
-	// Now as allocated on the heap
-	//
+        //
+        // Now as allocated on the heap
+        //
         create_thread(&c_1, ring_buffer_heap, entry_processor_thread);
         create_thread(&c_2, ring_buffer_heap, entry_processor_thread);
         sleep(1);
@@ -219,8 +219,8 @@ main(int argc, char *argv[])
         // join entry processors
         pthread_join(c_1, NULL);
         pthread_join(c_2, NULL);
-	free(ring_buffer_heap);
-	printf("On-The-Heap test done\n");
+        free(ring_buffer_heap);
+        printf("On-The-Heap test done\n");
 
         return EXIT_SUCCESS;
 }

@@ -145,19 +145,19 @@ main(int argc, char *argv[])
         cursor_t cursor;
         entry_t *entry;
         uint_fast64_t reps = ENTRIES_TO_GENERATE;
-	ring_buffer_t *ring_buffer_heap;
+        ring_buffer_t *ring_buffer_heap;
 
-	ring_buffer_heap = ring_buffer_malloc();
-	if (!ring_buffer_heap) {
-		printf("Malloc ring buffer - ERROR\n");
-		return EXIT_FAILURE;
-	}
+        ring_buffer_heap = ring_buffer_malloc();
+        if (!ring_buffer_heap) {
+                printf("Malloc ring buffer - ERROR\n");
+                return EXIT_FAILURE;
+        }
         ring_buffer_init(ring_buffer_heap);
         ring_buffer_init(&ring_buffer);
 
-	//
-	// first as a global variable
-	//
+        //
+        // first as a global variable
+        //
         if (!create_thread(&thread_id, &ring_buffer, entry_processor_thread)) {
                 printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
@@ -185,17 +185,17 @@ main(int argc, char *argv[])
 
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
-	printf("As-Global-Variable test done\n\n");
+        printf("As-Global-Variable test done\n\n");
 
-	//
-	// Now as allocated on the heap
-	//
+        //
+        // Now as allocated on the heap
+        //
         if (!create_thread(&thread_id, ring_buffer_heap, entry_processor_thread)) {
                 printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
         }
 
-	reps = ENTRIES_TO_GENERATE;
+        reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
                 publisher_port_nextEntry_blocking(ring_buffer_heap, &cursor);
@@ -218,7 +218,7 @@ main(int argc, char *argv[])
 
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
-	printf("On-The-Heap test done\n");
+        printf("On-The-Heap test done\n");
 
         return EXIT_SUCCESS;
 }
