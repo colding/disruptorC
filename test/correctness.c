@@ -34,10 +34,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef HAVE_CONFIG_H
-    #include "ac_config.h"
-#endif
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +41,10 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <pthread.h>
+
+#ifdef HAVE_CONFIG_H
+    #include "ac_config.h"
+#endif
 
 #define YIELD() sched_yield()
 #include "src/disruptor.h"
