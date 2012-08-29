@@ -37,11 +37,13 @@
 #ifndef DISRUPTORC_H
 #define DISRUPTORC_H
 
+#include <limits.h>
+#include <inttypes.h>
+
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
-#include <limits.h>
-#include <inttypes.h>
+#include "disruptor_types.h"
 
 #ifndef YIELD
     #define VOLATILE volatile
@@ -74,22 +76,6 @@ next_power_of_two(size_t k)
 
         return ++k;
 }
-
-/*
- * Cacheline padded counter.
- */
-typedef struct {
-        uint_fast64_t count;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? CACHE_LINE_SIZE - sizeof(uint_fast64_t) : 0];
-} count_t __attribute__((aligned(CACHE_LINE_SIZE)));
-
-/*
- * Cacheline padded cursor into ring buffer. Wrapping around forever.
- */
-typedef struct {
-        uint_fast64_t sequence;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? CACHE_LINE_SIZE - sizeof(uint_fast64_t) : 0];
-} cursor_t __attribute__((aligned(CACHE_LINE_SIZE)));
 
 /*
  * Cacheline padded elements of ring.
