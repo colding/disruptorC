@@ -106,13 +106,7 @@ entry_processor_thread(void *arg)
         const entry_t *entry;
 
         // register and setup entry processor
-        cursor.sequence = 0;
-        entry_processor_barrier_register(buffer, &reg_number);
-
-        // initialize entry processing
-        cursor.sequence = buffer->entry_processor_cursors[reg_number.count].sequence;
-        if (!cursor.sequence)
-                cursor.sequence = 1;
+        cursor.sequence = entry_processor_barrier_register(buffer, &reg_number);
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
@@ -144,7 +138,7 @@ main(int argc, char *argv[])
         pthread_t thread_id; // consumer/entry processor
         cursor_t cursor;
         entry_t *entry;
-        uint_fast64_t reps = ENTRIES_TO_GENERATE;
+        uint_fast64_t reps;
         ring_buffer_t *ring_buffer_heap;
 
         ring_buffer_heap = ring_buffer_malloc();
@@ -163,6 +157,7 @@ main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
+        reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
                 publisher_port_nextEntry_blocking(&ring_buffer, &cursor);

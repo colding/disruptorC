@@ -128,13 +128,7 @@ entry_processor_thread(void *arg)
         const entry_t *entry;
 
         // register and setup entry processor
-        cursor.sequence = 0;
-        entry_processor_barrier_register(buffer, &reg_number);
-
-        // initialize entry processing
-        cursor.sequence = buffer->entry_processor_cursors[reg_number.count].sequence;
-        if (!cursor.sequence)
-                cursor.sequence = 1;
+        cursor.sequence = entry_processor_barrier_register(buffer, &reg_number);
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
