@@ -176,32 +176,37 @@ ring_buffer_acquireEntry(ring_buffer_type_name__ * const ring_buffer,           
  * array with the sequence number of the entry that they are currently
  * processing.
  */
-#define DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__)                                                     \
-static inline uint_fast64_t                                                                                                           \
-entry_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                         \
-                                 count_t * const entry_processor_number)                                                              \
-{                                                                                                                                     \
-        unsigned int n;                                                                                                               \
-        uint_fast64_t vacant = VACANT__;                                                                                              \
-                                                                                                                                      \
-        do {                                                                                                                          \
-                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {                                 \
-                        if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                            \
-                                                        &vacant,                                                                      \
-                                                        __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE),    \
-                                                        1,                                                                            \
-                                                        __ATOMIC_RELEASE,                                                             \
-                                                        __ATOMIC_RELAXED)) {                                                          \
-                                entry_processor_number->count = n;                                                                    \
-                                goto out;                                                                                             \
-                        }                                                                                                             \
-                        vacant = VACANT__;                                                                                            \
-                }                                                                                                                     \
-        } while (1);                                                                                                                  \
-out:                                                                                                                                  \
-	if (!__atomic_load_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, __ATOMIC_RELAXED))        \
-		__atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, 1, __ATOMIC_RELAXED); \
-	return __atomic_load_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, __ATOMIC_RELAXED);      \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__)                                                  \
+static inline uint_fast64_t                                                                                                        \
+entry_processor_barrier_register(ring_buffer_type_name__ * const ring_buffer,                                                      \
+                                 count_t * const entry_processor_number)                                                           \
+{                                                                                                                                  \
+        unsigned int n;                                                                                                            \
+        uint_fast64_t vacant = VACANT__;                                                                                           \
+                                                                                                                                   \
+        do {                                                                                                                       \
+                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(cursor_t); ++n) {                              \
+                        if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                         \
+                                                        &vacant,                                                                   \
+                                                        __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE), \
+                                                        1,                                                                         \
+                                                        __ATOMIC_RELEASE,                                                          \
+                                                        __ATOMIC_RELAXED)) {                                                       \
+                                entry_processor_number->count = n;                                                                 \
+                                goto out;                                                                                          \
+                        }                                                                                                          \
+                        vacant = VACANT__;                                                                                         \
+                }                                                                                                                  \
+        } while (1);                                                                                                               \
+out:                                                                                                                               \
+        vacant = 0;                                                                                                                \
+        __atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence,                 \
+                                    &vacant,                                                                                       \
+                                    1,                                                                                             \
+                                    1,                                                                                             \
+                                    __ATOMIC_RELAXED,                                                                              \
+                                    __ATOMIC_RELAXED);                                                                             \
+        return ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence;                                       \
 }
 
 /*
