@@ -37,10 +37,11 @@
 #ifndef DISRUPTORC_TYPES_H
 #define DISRUPTORC_TYPES_H
 
+#include <inttypes.h>
+
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
-#include <inttypes.h>
 
 /*
  * Cacheline padded counter.

@@ -38,7 +38,8 @@
 #define DISRUPTORC_H
 
 #include <limits.h>
-#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
