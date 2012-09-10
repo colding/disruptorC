@@ -108,14 +108,14 @@ next_power_of_two(size_t k)
 /*
  * This function returns a properly aligned ring buffer or NULL.
  */
-#define DEFINE_RING_BUFFER_MALLOC(ring_buffer_type_name__)                                               \
-static inline ring_buffer_type_name__ *                                                                  \
-ring_buffer_malloc(void)                                                                                 \
-{                                                                                                        \
-        ring_buffer_type_name__ *retv = NULL;                                                            \
-        const size_t alignment = next_power_of_two(CACHE_LINE_SIZE);                                     \
-                                                                                                         \
-        return (posix_memalign((void*)&retv, alignment, sizeof(ring_buffer_type_name__)) ? NULL : retv); \
+#define DEFINE_RING_BUFFER_MALLOC(ring_buffer_type_name__)                                                \
+static inline ring_buffer_type_name__ *                                                                   \
+ring_buffer_malloc(void)                                                                                  \
+{                                                                                                         \
+        ring_buffer_type_name__ *retv = NULL;                                                             \
+        const size_t alignment = next_power_of_two(CACHE_LINE_SIZE);                                      \
+                                                                                                          \
+        return (posix_memalign((void**)&retv, alignment, sizeof(ring_buffer_type_name__)) ? NULL : retv); \
 }
 
 /*
