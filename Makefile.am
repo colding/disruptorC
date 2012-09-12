@@ -1,5 +1,5 @@
 #  
-#  Copyright (C) 2010-2012 by Sofie-Louise Maria Colding
+#  Copyright (C) 2012 by Jules Colding <jcolding@gmail.com>.
 #
 #  All Rights Reserved.
 #
