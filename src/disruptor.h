@@ -147,8 +147,8 @@ ring_buffer_init(ring_buffer_type_name__ * const ring_buffer)                   
  */
 #define DEFINE_RING_BUFFER_SHOW_ENTRY_FUNCTION(entry_type_name__, ring_buffer_type_name__) \
 static inline const entry_type_name__*                                                     \
-ring_buffer_showEntry(const ring_buffer_type_name__ * const ring_buffer,                   \
-                      const cursor_t * const cursor)                                       \
+ring_buffer_show_entry(const ring_buffer_type_name__ * const ring_buffer,                  \
+                       const cursor_t * const cursor)                                      \
 {                                                                                          \
         return &ring_buffer->buffer[ring_buffer->reduced_size.count & cursor->sequence];   \
 }
@@ -161,7 +161,7 @@ ring_buffer_showEntry(const ring_buffer_type_name__ * const ring_buffer,        
  */
 #define DEFINE_RING_BUFFER_ACQUIRE_ENTRY_FUNCTION(entry_type_name__, ring_buffer_type_name__) \
 static inline entry_type_name__*                                                              \
-ring_buffer_acquireEntry(ring_buffer_type_name__ * const ring_buffer,                         \
+ring_buffer_acquire_entry(ring_buffer_type_name__ * const ring_buffer,                        \
                          const cursor_t * const cursor)                                       \
 {                                                                                             \
         return &ring_buffer->buffer[ring_buffer->reduced_size.count & cursor->sequence];      \
@@ -229,8 +229,8 @@ entry_processor_barrier_unregister(ring_buffer_type_name__ * const ring_buffer, 
  */
 #define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__)                    \
 static inline void                                                                                           \
-entry_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const ring_buffer,                  \
-                                         cursor_t * const cursor)                                            \
+entry_processor_barrier_wait_for_blocking(const ring_buffer_type_name__ * const ring_buffer,                 \
+                                          cursor_t * const cursor)                                           \
 {                                                                                                            \
         while (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)) \
                 YIELD();                                                                                     \
@@ -245,7 +245,7 @@ entry_processor_barrier_waitFor_blocking(const ring_buffer_type_name__ * const r
  */
 #define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__)              \
 static inline int                                                                                         \
-entry_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * const ring_buffer,            \
+entry_processor_barrier_wait_for_nonblocking(const ring_buffer_type_name__ * const ring_buffer,           \
                                             cursor_t * const cursor)                                      \
 {                                                                                                         \
         if (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)) \
@@ -261,7 +261,7 @@ entry_processor_barrier_waitFor_nonblocking(const ring_buffer_type_name__ * cons
  */
 #define DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_type_name__)                                                        \
 static inline void                                                                                                                           \
-entry_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer,                                                            \
+entry_processor_barrier_release_entry(ring_buffer_type_name__ * const ring_buffer,                                                           \
                                      const count_t * const entry_processor_number,                                                           \
                                      const cursor_t * const cursor)                                                                          \
 {                                                                                                                                            \
@@ -279,7 +279,7 @@ entry_processor_barrier_releaseEntry(ring_buffer_type_name__ * const ring_buffer
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                             \
 static inline void                                                                                                  \
-publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,                                      \
+publisher_port_next_entry_blocking(ring_buffer_type_name__ * const ring_buffer,                                     \
                                   cursor_t * const  cursor)                                                         \
 {                                                                                                                   \
         unsigned int n;                                                                                             \
@@ -307,7 +307,7 @@ publisher_port_nextEntry_blocking(ring_buffer_type_name__ * const ring_buffer,  
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__)                           \
 static inline void                                                                                                  \
-publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,                                    \
+publisher_port_commit_entry_blocking(ring_buffer_type_name__ * const ring_buffer,                                   \
                                     const cursor_t * const cursor)                                                  \
 {                                                                                                                   \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
@@ -324,7 +324,7 @@ publisher_port_commitEntry_blocking(ring_buffer_type_name__ * const ring_buffer,
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__)                     \
 static inline int                                                                                                \
-publisher_port_commitEntry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                              \
+publisher_port_commit_entry_nonblocking(ring_buffer_type_name__ * const ring_buffer,                             \
                                        const cursor_t * const cursor)                                            \
 {                                                                                                                \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                       \

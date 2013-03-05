@@ -99,16 +99,16 @@ entry_publisher_thread(void *arg)
         uint64_t reps = ENTRIES_TO_GENERATE;
 
         do {
-                publisher_port_nextEntry_blocking(buffer, &cursor);
-                entry = ring_buffer_acquireEntry(buffer, &cursor);
+                publisher_port_next_entry_blocking(buffer, &cursor);
+                entry = ring_buffer_acquire_entry(buffer, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commitEntry_blocking(buffer, &cursor);
+                publisher_port_commit_entry_blocking(buffer, &cursor);
         } while (--reps);
 
-        publisher_port_nextEntry_blocking(buffer, &cursor);
-        entry = ring_buffer_acquireEntry(buffer, &cursor);
+        publisher_port_next_entry_blocking(buffer, &cursor);
+        entry = ring_buffer_acquire_entry(buffer, &cursor);
         entry->content = STOP;
-        publisher_port_commitEntry_blocking(buffer, &cursor);
+        publisher_port_commit_entry_blocking(buffer, &cursor);
         printf("Publisher done\n");
 
         return NULL;
@@ -129,9 +129,9 @@ entry_processor_thread(void *arg)
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
-                entry_processor_barrier_waitFor_blocking(buffer, &cursor_upper_limit);
+                entry_processor_barrier_wait_for_blocking(buffer, &cursor_upper_limit);
                 for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { // batching
-                        entry = ring_buffer_showEntry(buffer, &n);
+                        entry = ring_buffer_show_entry(buffer, &n);
                         if (STOP == entry->content) {
                                 printf("Entry processor exiting normally\n");
                                 goto out;
@@ -142,7 +142,7 @@ entry_processor_thread(void *arg)
                                 goto out;
                         }
                 }
-                entry_processor_barrier_releaseEntry(buffer, &reg_number, &cursor_upper_limit);
+                entry_processor_barrier_release_entry(buffer, &reg_number, &cursor_upper_limit);
 
                 ++cursor_upper_limit.sequence;
                 cursor.sequence = cursor_upper_limit.sequence;
