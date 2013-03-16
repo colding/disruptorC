@@ -46,17 +46,17 @@
 /*
  * Cacheline padded counter.
  */
-typedef struct {
+struct count_t {
         uint_fast64_t count;
         uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? CACHE_LINE_SIZE - sizeof(uint_fast64_t) : 0];
-} count_t __attribute__((aligned(CACHE_LINE_SIZE)));
+} __attribute__((aligned(CACHE_LINE_SIZE)));
 
 /*
  * Cacheline padded cursor into ring buffer. Wrapping around forever.
  */
-typedef struct {
+struct cursor_t {
         uint_fast64_t sequence;
         uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? CACHE_LINE_SIZE - sizeof(uint_fast64_t) : 0];
-} cursor_t __attribute__((aligned(CACHE_LINE_SIZE)));
+} __attribute__((aligned(CACHE_LINE_SIZE)));
 
 #endif //  DISRUPTORC_TYPES_H

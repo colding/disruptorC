@@ -64,7 +64,7 @@ DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
-ring_buffer_t ring_buffer;
+struct ring_buffer_t ring_buffer;
 struct timeval start;
 struct timeval end;
 
@@ -95,12 +95,12 @@ err:
 static void*
 entry_processor_thread(void *arg)
 {
-        cursor_t n;
-        ring_buffer_t *buffer = (ring_buffer_t*)arg;
-        cursor_t cursor;
-        cursor_t cursor_upper_limit;
-        count_t reg_number;
-        const entry_t *entry;
+        struct cursor_t n;
+        struct ring_buffer_t *buffer = (struct ring_buffer_t*)arg;
+        struct cursor_t cursor;
+        struct cursor_t cursor_upper_limit;
+        struct count_t reg_number;
+        const struct entry_t *entry;
 
         // register and setup entry processor
         cursor.sequence = entry_processor_barrier_register(buffer, &reg_number);
@@ -133,10 +133,10 @@ main(int argc, char *argv[])
         double start_time;
         double end_time;
         pthread_t thread_id; // consumer/entry processor
-        cursor_t cursor;
-        entry_t *entry;
+        struct cursor_t cursor;
+        struct entry_t *entry;
         uint_fast64_t reps;
-        ring_buffer_t *ring_buffer_heap;
+        struct ring_buffer_t *ring_buffer_heap;
 
         ring_buffer_heap = ring_buffer_malloc();
         if (!ring_buffer_heap) {
