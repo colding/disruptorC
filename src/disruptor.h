@@ -129,6 +129,7 @@ ring_buffer_prefix__ ## ring_buffer_init(struct ring_buffer_type_name__ * const 
 {                                                                                                   \
         unsigned int n;                                                                             \
                                                                                                     \
+        memset((void*)ring_buffer, 0, sizeof(struct ring_buffer_type_name__));                      \
         for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n)  \
                 ring_buffer->entry_processor_cursors[n].sequence = VACANT__;                        \
         __atomic_store_n(&ring_buffer->reduced_size.count, entry_capacity__ - 1, __ATOMIC_SEQ_CST); \
