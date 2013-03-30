@@ -281,7 +281,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
 #define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)    \
 static inline void                                                                                                  \
 ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,      \
-                                                           struct cursor_t * const  cursor)                         \
+                                                           struct cursor_t * const cursor)                          \
 {                                                                                                                   \
         unsigned int n;                                                                                             \
         uint_fast64_t seq;                                                                                          \
