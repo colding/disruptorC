@@ -277,7 +277,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
  * is actually faster than __ATOMIC_RELAXED contrary to what I would
  * expect. Mayby other entry types will show otherwise.
  * 
- * It is actually faster (at least on my machione) to do "x = 1 +
+ * It is actually faster (at least on my machine) to do "x = 1 +
  * fetch_add(, 1)" instead of "x = add_fetch(, 1)".
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)    \
