@@ -191,7 +191,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_register(struct ring_buffer_type
                 for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                               \
                         if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                                 \
                                                         &vacant,                                                                           \
-                                                        __atomic_load_n(&ring_buffer->slowest_entry_processor.sequence, __ATOMIC_ACQUIRE), \
+                                                        __atomic_load_n(&ring_buffer->slowest_entry_processor.sequence, __ATOMIC_RELAXED), \
                                                         1,                                                                                 \
                                                         __ATOMIC_RELEASE,                                                                  \
                                                         __ATOMIC_RELAXED)) {                                                               \
@@ -289,13 +289,13 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
         do {                                                                                                                 \
                 slowest_reader.sequence = VACANT__;                                                                          \
                 for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                 \
-                        seq.sequence = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
+                        seq.sequence = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_RELAXED); \
                         if (seq.sequence < slowest_reader.sequence)                                                          \
                                 slowest_reader.sequence = seq.sequence;                                                      \
                 }                                                                                                            \
                 if (VACANT__ == slowest_reader.sequence)                                                                     \
                         slowest_reader.sequence = cursor->sequence - (ring_buffer->reduced_size.count & cursor->sequence);   \
-                __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELEASE); \
+                __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELAXED); \
                 if ((cursor->sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count)                         \
                         return;                                                                                              \
                 YIELD();                                                                                                     \
