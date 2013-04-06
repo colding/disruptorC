@@ -202,13 +202,8 @@ ring_buffer_prefix__ ## entry_processor_barrier_register(struct ring_buffer_type
                 }                                                                                                                          \
         } while (1);                                                                                                                       \
 out:                                                                                                                                       \
-        vacant = 0;                                                                                                                        \
-        __atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence,                         \
-                                    &vacant,                                                                                               \
-                                    1,                                                                                                     \
-                                    1,                                                                                                     \
-                                    __ATOMIC_RELAXED,                                                                                      \
-                                    __ATOMIC_RELAXED);                                                                                     \
+	if (!ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence)                                                 \
+		__atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, 1, __ATOMIC_RELAXED);      \
         return ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence;                                               \
 }
 
