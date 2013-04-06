@@ -102,6 +102,7 @@ next_power_of_two(size_t k)
 #define DEFINE_RING_BUFFER_TYPE(entry_processor_capacity__, entry_capacity__, entry_type_name__, ring_buffer_type_name__) \
     struct ring_buffer_type_name__ {                                                                                      \
             struct count_t reduced_size;                                                                                  \
+            VOLATILE struct cursor_t slowest_entry_processor;                                                             \
             VOLATILE struct cursor_t max_read_cursor;                                                                     \
             VOLATILE struct cursor_t write_cursor;                                                                        \
             VOLATILE struct cursor_t entry_processor_cursors[entry_processor_capacity__];                                 \
@@ -178,37 +179,37 @@ ring_buffer_prefix__ ## ring_buffer_acquire_entry(struct ring_buffer_type_name__
  * array with the sequence number of the entry that they are currently
  * processing.
  */
-#define DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                         \
-static inline uint_fast64_t                                                                                                        \
-ring_buffer_prefix__ ## entry_processor_barrier_register(struct ring_buffer_type_name__ * const ring_buffer,                       \
-                                                         struct count_t * const entry_processor_number)                            \
-{                                                                                                                                  \
-        unsigned int n;                                                                                                            \
-        uint_fast64_t vacant = VACANT__;                                                                                           \
-                                                                                                                                   \
-        do {                                                                                                                       \
-                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                       \
-                        if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                         \
-                                                        &vacant,                                                                   \
-                                                        __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE), \
-                                                        1,                                                                         \
-                                                        __ATOMIC_RELEASE,                                                          \
-                                                        __ATOMIC_RELAXED)) {                                                       \
-                                entry_processor_number->count = n;                                                                 \
-                                goto out;                                                                                          \
-                        }                                                                                                          \
-                        vacant = VACANT__;                                                                                         \
-                }                                                                                                                  \
-        } while (1);                                                                                                               \
-out:                                                                                                                               \
-        vacant = 0;                                                                                                                \
-        __atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence,                 \
-                                    &vacant,                                                                                       \
-                                    1,                                                                                             \
-                                    1,                                                                                             \
-                                    __ATOMIC_RELAXED,                                                                              \
-                                    __ATOMIC_RELAXED);                                                                             \
-        return ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence;                                       \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                 \
+static inline uint_fast64_t                                                                                                                \
+ring_buffer_prefix__ ## entry_processor_barrier_register(struct ring_buffer_type_name__ * const ring_buffer,                               \
+                                                         struct count_t * const entry_processor_number)                                    \
+{                                                                                                                                          \
+        unsigned int n;                                                                                                                    \
+        uint_fast64_t vacant = VACANT__;                                                                                                   \
+                                                                                                                                           \
+        do {                                                                                                                               \
+                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                               \
+                        if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                                 \
+                                                        &vacant,                                                                           \
+                                                        __atomic_load_n(&ring_buffer->slowest_entry_processor.sequence, __ATOMIC_ACQUIRE), \
+                                                        1,                                                                                 \
+                                                        __ATOMIC_RELEASE,                                                                  \
+                                                        __ATOMIC_RELAXED)) {                                                               \
+                                entry_processor_number->count = n;                                                                         \
+                                goto out;                                                                                                  \
+                        }                                                                                                                  \
+                        vacant = VACANT__;                                                                                                 \
+                }                                                                                                                          \
+        } while (1);                                                                                                                       \
+out:                                                                                                                                       \
+        vacant = 0;                                                                                                                        \
+        __atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence,                         \
+                                    &vacant,                                                                                               \
+                                    1,                                                                                                     \
+                                    1,                                                                                                     \
+                                    __ATOMIC_RELAXED,                                                                                      \
+                                    __ATOMIC_RELAXED);                                                                                     \
+        return ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence;                                               \
 }
 
 /*
@@ -280,28 +281,30 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
  * It is actually faster (at least on my machine) to do "x = 1 +
  * fetch_add(, 1)" instead of "x = add_fetch(, 1)".
  */
-#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)    \
-static inline void                                                                                                  \
-ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,      \
-                                                           struct cursor_t * const cursor)                          \
-{                                                                                                                   \
-        unsigned int n;                                                                                             \
-        uint_fast64_t seq;                                                                                          \
-        uint_fast64_t slowest_reader;                                                                               \
-                                                                                                                    \
-        cursor->sequence = 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);        \
-        do {                                                                                                        \
-                slowest_reader = VACANT__;                                                                          \
-                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {        \
-                        seq = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
-                        if (seq < slowest_reader)                                                                   \
-                                slowest_reader = seq;                                                               \
-                }                                                                                                   \
-                if (((cursor->sequence - slowest_reader) <= ring_buffer->reduced_size.count)                        \
-                    || (VACANT__ == slowest_reader))                                                                \
-                        return;                                                                                     \
-                YIELD();                                                                                            \
-        } while (1);                                                                                                \
+#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)             \
+static inline void                                                                                                           \
+ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,               \
+                                                           struct cursor_t * const cursor)                                   \
+{                                                                                                                            \
+        unsigned int n;                                                                                                      \
+        struct cursor_t seq;                                                                                                 \
+        struct cursor_t slowest_reader;                                                                                      \
+                                                                                                                             \
+        cursor->sequence = 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE);                 \
+        do {                                                                                                                 \
+                slowest_reader.sequence = VACANT__;                                                                          \
+                for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                 \
+                        seq.sequence = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE); \
+                        if (seq.sequence < slowest_reader.sequence)                                                          \
+                                slowest_reader.sequence = seq.sequence;                                                      \
+                }                                                                                                            \
+                if (VACANT__ == slowest_reader.sequence)                                                                     \
+                        slowest_reader.sequence = cursor->sequence - (ring_buffer->reduced_size.count & cursor->sequence);   \
+                __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELEASE); \
+                if ((cursor->sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count)                         \
+                        return;                                                                                              \
+                YIELD();                                                                                                     \
+        } while (1);                                                                                                         \
 }
 
 /*
