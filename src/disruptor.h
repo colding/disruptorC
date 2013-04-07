@@ -57,6 +57,13 @@
 #endif
 
 /*
+ * Hints to the compiler whether an expression is likely to be true or
+ * not
+ */
+#define LIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 1))
+#define UNLIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 0))
+
+/*
  * An entry processor cursor spot that has this value is not used and
  * thereby vacant.
  */
@@ -202,8 +209,10 @@ ring_buffer_prefix__ ## entry_processor_barrier_register(struct ring_buffer_type
                 }                                                                                                                          \
         } while (1);                                                                                                                       \
 out:                                                                                                                                       \
-	if (!ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence)                                                 \
-		__atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, 1, __ATOMIC_RELEASE);      \
+        if (!ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence) {                                               \
+                __atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, 1, __ATOMIC_RELEASE);      \
+                return 1;                                                                                                                  \
+        }                                                                                                                                  \
         return ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence;                                               \
 }
 
@@ -293,10 +302,10 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
                         if (seq.sequence < slowest_reader.sequence)                                                          \
                                 slowest_reader.sequence = seq.sequence;                                                      \
                 }                                                                                                            \
-                if (VACANT__ == slowest_reader.sequence)                                                                     \
+                if (UNLIKELY__(VACANT__ == slowest_reader.sequence))                                                         \
                         slowest_reader.sequence = cursor->sequence - (ring_buffer->reduced_size.count & cursor->sequence);   \
                 __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELEASE); \
-                if ((cursor->sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count)                         \
+                if (LIKELY__((cursor->sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count))               \
                         return;                                                                                              \
                 YIELD();                                                                                                     \
         } while (1);                                                                                                         \
