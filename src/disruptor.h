@@ -240,10 +240,12 @@ static inline void                                                              
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer, \
                                                                   struct cursor_t * const cursor)                           \
 {                                                                                                                           \
-        while (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE))                \
+        uint_fast64_t seq;                                                                                                  \
+                                                                                                                            \
+        while (cursor->sequence > (seq = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)))        \
                 YIELD();                                                                                                    \
                                                                                                                             \
-        cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);                       \
+        cursor->sequence = seq;                                                                                             \
 }
 
 /*
@@ -256,10 +258,13 @@ static inline int                                                               
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_nonblocking(const struct ring_buffer_type_name__ * const ring_buffer, \
                                                                      struct cursor_t * const cursor)                           \
 {                                                                                                                              \
-        if (cursor->sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE))                      \
+        uint_fast64_t seq;                                                                                                     \
+                                                                                                                               \
+        if (cursor->sequence > ( seq = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)))             \
                 return 0;                                                                                                      \
                                                                                                                                \
-        cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);                          \
+        cursor->sequence = seq;                                                                                                \
+                                                                                                                               \
         return 1;                                                                                                              \
 }
 
@@ -324,6 +329,7 @@ ring_buffer_prefix__ ## publisher_port_commit_entry_blocking(struct ring_buffer_
                                                                                                                     \
         while (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE) != required_read_sequence) \
                 YIELD();                                                                                            \
+                                                                                                                    \
         __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                            \
 }
 
@@ -343,6 +349,7 @@ ring_buffer_prefix__ ## publisher_port_commit_entry_nonblocking(struct ring_buff
                 return 0;                                                                                             \
                                                                                                                       \
         __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                              \
+                                                                                                                      \
         return 1;                                                                                                     \
 }
 
