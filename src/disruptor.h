@@ -235,17 +235,17 @@ ring_buffer_prefix__ ## entry_processor_barrier_unregister(struct ring_buffer_ty
  * entry_processor_cursors array, by way of the register function, to
  * know with which sequence number to begin.
  */
-#define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)          \
-static inline void                                                                                                          \
-ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer, \
-                                                                  struct cursor_t * const cursor)                           \
-{                                                                                                                           \
-        uint_fast64_t seq;                                                                                                  \
-                                                                                                                            \
-        while (cursor->sequence > (seq = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)))        \
-                YIELD();                                                                                                    \
-                                                                                                                            \
-        cursor->sequence = seq;                                                                                             \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)            \
+static inline void                                                                                                            \
+ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer,   \
+                                                                  struct cursor_t * const cursor)                             \
+{                                                                                                                             \
+        struct cursor_t seq;                                                                                                  \
+                                                                                                                              \
+        while (cursor->sequence > (seq.sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE))) \
+                YIELD();                                                                                                      \
+                                                                                                                              \
+        cursor->sequence = seq.sequence;                                                                                      \
 }
 
 /*
@@ -258,12 +258,12 @@ static inline int                                                               
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_nonblocking(const struct ring_buffer_type_name__ * const ring_buffer, \
                                                                      struct cursor_t * const cursor)                           \
 {                                                                                                                              \
-        uint_fast64_t seq;                                                                                                     \
+        struct cursor_t seq;                                                                                                   \
                                                                                                                                \
-        if (cursor->sequence > ( seq = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)))             \
+        if (cursor->sequence > (seq.sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE)))     \
                 return 0;                                                                                                      \
                                                                                                                                \
-        cursor->sequence = seq;                                                                                                \
+        cursor->sequence = seq.sequence;                                                                                       \
                                                                                                                                \
         return 1;                                                                                                              \
 }
