@@ -73,7 +73,7 @@
  * Will return k iff k is a power of two, or the next power of two
  * which is greater than k.
  */
-static inline size_t
+static size_t
 next_power_of_two(size_t k)
 {
         size_t i;
@@ -120,7 +120,7 @@ next_power_of_two(size_t k)
  * This function returns a properly aligned ring buffer or NULL.
  */
 #define DEFINE_RING_BUFFER_MALLOC(ring_buffer_type_name__, ring_buffer_prefix__...)                              \
-static inline struct ring_buffer_type_name__ *                                                                   \
+static struct ring_buffer_type_name__ *                                                                          \
 ring_buffer_prefix__ ## ring_buffer_malloc(void)                                                                 \
 {                                                                                                                \
         struct ring_buffer_type_name__ *retv = NULL;                                                             \
@@ -134,7 +134,7 @@ ring_buffer_prefix__ ## ring_buffer_malloc(void)                                
  * put into use.
  */
 #define DEFINE_RING_BUFFER_INIT(entry_capacity__, ring_buffer_type_name__, ring_buffer_prefix__...) \
-static inline void                                                                                  \
+static void                                                                                         \
 ring_buffer_prefix__ ## ring_buffer_init(struct ring_buffer_type_name__ * const ring_buffer)        \
 {                                                                                                   \
         unsigned int n;                                                                             \
@@ -291,7 +291,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
  * fetch_add(, 1)" instead of "x = add_fetch(, 1)".
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)             \
-static inline void                                                                                                           \
+static inline __attribute__((always_inline)) void                                                                            \
 ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,               \
                                                            struct cursor_t * const cursor)                                   \
 {                                                                                                                            \
@@ -357,7 +357,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_nonblocking(struct ring_buffer
  * entry processors. Blocks until the entry has been committed.
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)  \
-static inline void                                                                                                  \
+static inline __attribute__((always_inline)) void                                                                   \
 ring_buffer_prefix__ ## publisher_port_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,    \
                                                              const struct cursor_t * const cursor)                  \
 {                                                                                                                   \
