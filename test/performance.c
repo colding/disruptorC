@@ -5,7 +5,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
  *  You can use, modify and redistribute it in any way you want.
  */
@@ -38,6 +38,7 @@ DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 struct ring_buffer_t ring_buffer;
@@ -113,18 +114,57 @@ main(int argc, char *argv[])
         struct entry_t *entry;
         uint_fast64_t reps;
         struct ring_buffer_t *ring_buffer_heap;
+        struct ring_buffer_t ring_buffer_stack;
 
         ring_buffer_heap = ring_buffer_malloc();
         if (!ring_buffer_heap) {
                 printf("Malloc ring buffer - ERROR\n");
                 return EXIT_FAILURE;
         }
-        ring_buffer_init(ring_buffer_heap);
-        ring_buffer_init(&ring_buffer);
 
-        //
-        // first as a global variable
-        //
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //                global variable with a non-blocking next_entry test
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        ring_buffer_init(&ring_buffer);
+        if (!create_thread(&thread_id, &ring_buffer, entry_processor_thread)) {
+                printf("could not create entry processor thread\n");
+                return EXIT_FAILURE;
+        }
+
+        reps = ENTRIES_TO_GENERATE;
+        gettimeofday(&start, NULL);
+        do {
+        again1:
+                if (!publisher_port_next_entry_nonblocking(&ring_buffer, &cursor))
+                        goto again1;
+                entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
+                entry->content = cursor.sequence;
+                publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
+        } while (--reps);
+
+        publisher_port_next_entry_blocking(&ring_buffer, &cursor);
+        entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
+        entry->content = STOP;
+        publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
+        printf("Publisher done\n");
+
+        // join entry processor
+        pthread_join(thread_id, NULL);
+
+        start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
+        end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
+
+        printf("Elapsed time = %lf seconds\n", end_time - start_time);
+        printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
+        printf("As-Global-Variable non-blocking test done\n\n");
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //                global variable with a blocking next_entry test
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        ring_buffer_init(&ring_buffer);
         if (!create_thread(&thread_id, &ring_buffer, entry_processor_thread)) {
                 printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
@@ -153,11 +193,88 @@ main(int argc, char *argv[])
 
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
-        printf("As-Global-Variable test done\n\n");
+        printf("As-Global-Variable blocking test done\n\n");
 
-        //
-        // Now as allocated on the heap
-        //
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //               stack variable with a non-blocking next_entry test
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        ring_buffer_init(&ring_buffer_stack);
+        if (!create_thread(&thread_id, &ring_buffer_stack, entry_processor_thread)) {
+                printf("could not create entry processor thread\n");
+                return EXIT_FAILURE;
+        }
+
+        reps = ENTRIES_TO_GENERATE;
+        gettimeofday(&start, NULL);
+        do {
+        again2:
+                if (!publisher_port_next_entry_nonblocking(&ring_buffer_stack, &cursor))
+                        goto again2;
+                entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
+                entry->content = cursor.sequence;
+                publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+        } while (--reps);
+
+        publisher_port_next_entry_blocking(&ring_buffer_stack, &cursor);
+        entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
+        entry->content = STOP;
+        publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+        printf("Publisher done\n");
+
+        // join entry processor
+        pthread_join(thread_id, NULL);
+
+        start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
+        end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
+
+        printf("Elapsed time = %lf seconds\n", end_time - start_time);
+        printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
+        printf("As-Stack-Variable non-blocking test done\n\n");
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        // stack variable with a blocking next_entry test
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        ring_buffer_init(&ring_buffer_stack);
+        if (!create_thread(&thread_id, &ring_buffer_stack, entry_processor_thread)) {
+                printf("could not create entry processor thread\n");
+                return EXIT_FAILURE;
+        }
+
+        reps = ENTRIES_TO_GENERATE;
+        gettimeofday(&start, NULL);
+        do {
+                publisher_port_next_entry_blocking(&ring_buffer_stack, &cursor);
+                entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
+                entry->content = cursor.sequence;
+                publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+        } while (--reps);
+
+        publisher_port_next_entry_blocking(&ring_buffer_stack, &cursor);
+        entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
+        entry->content = STOP;
+        publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+        printf("Publisher done\n");
+
+        // join entry processor
+        pthread_join(thread_id, NULL);
+
+        start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
+        end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
+
+        printf("Elapsed time = %lf seconds\n", end_time - start_time);
+        printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
+        printf("As-Stack-Variable blocking test done\n\n");
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //            Now as allocated on the heap with a non-blocking next_entry
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        ring_buffer_init(ring_buffer_heap);
         if (!create_thread(&thread_id, ring_buffer_heap, entry_processor_thread)) {
                 printf("could not create entry processor thread\n");
                 return EXIT_FAILURE;
@@ -166,7 +283,9 @@ main(int argc, char *argv[])
         reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
-                publisher_port_next_entry_blocking(ring_buffer_heap, &cursor);
+        again3:
+                if (!publisher_port_next_entry_nonblocking(ring_buffer_heap, &cursor))
+                        goto again3;
                 entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
                 entry->content = cursor.sequence;
                 publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
@@ -186,7 +305,46 @@ main(int argc, char *argv[])
 
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
-        printf("On-The-Heap test done\n");
+        printf("On-The-Heap non-blocking test done\n\n");
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //              Now as allocated on the heap with a blocking next_entry
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        ring_buffer_init(ring_buffer_heap);
+        if (!create_thread(&thread_id, ring_buffer_heap, entry_processor_thread)) {
+                printf("could not create entry processor thread\n");
+                return EXIT_FAILURE;
+        }
+
+        reps = ENTRIES_TO_GENERATE;
+        gettimeofday(&start, NULL);
+        do {
+                if (!publisher_port_next_entry_nonblocking(ring_buffer_heap, &cursor))
+                        continue;
+                entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
+                entry->content = cursor.sequence;
+                publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
+        } while (--reps);
+
+        publisher_port_next_entry_blocking(ring_buffer_heap, &cursor);
+        entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
+        entry->content = STOP;
+        publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
+        printf("Publisher done\n");
+
+        // join entry processor
+        pthread_join(thread_id, NULL);
+
+        start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
+        end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
+
+        printf("Elapsed time = %lf seconds\n", end_time - start_time);
+        printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
+        printf("On-The-Heap blocking test done\n");
+
+
 
         return EXIT_SUCCESS;
 }

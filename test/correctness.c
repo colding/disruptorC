@@ -5,7 +5,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
  *  You can use, modify and redistribute it in any way you want.
  */
@@ -38,6 +38,7 @@ DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 struct ring_buffer_t ring_buffer;
@@ -67,7 +68,33 @@ err:
 }
 
 static void*
-entry_publisher_thread(void *arg)
+entry_publisher_nonblocking_thread(void *arg)
+{
+        struct ring_buffer_t *buffer = (struct ring_buffer_t*)arg;
+        struct cursor_t cursor;
+        struct entry_t *entry;
+        uint64_t reps = ENTRIES_TO_GENERATE;
+
+        do {
+        again:
+                if (!publisher_port_next_entry_nonblocking(buffer, &cursor))
+                        goto again;
+                entry = ring_buffer_acquire_entry(buffer, &cursor);
+                entry->content = cursor.sequence;
+                publisher_port_commit_entry_blocking(buffer, &cursor);
+        } while (--reps);
+
+        publisher_port_next_entry_blocking(buffer, &cursor);
+        entry = ring_buffer_acquire_entry(buffer, &cursor);
+        entry->content = STOP;
+        publisher_port_commit_entry_blocking(buffer, &cursor);
+        printf("Publisher done\n");
+
+        return NULL;
+}
+
+static void*
+entry_publisher_blocking_thread(void *arg)
 {
         struct ring_buffer_t *buffer = (struct ring_buffer_t*)arg;
         struct cursor_t cursor;
@@ -139,6 +166,7 @@ main(int argc, char *argv[])
         pthread_t c_1; // entry processor
         pthread_t c_2;
         struct ring_buffer_t *ring_buffer_heap;
+        struct ring_buffer_t ring_buffer_stack;
 
         ring_buffer_heap = ring_buffer_malloc();
         if (!ring_buffer_heap) {
@@ -146,17 +174,18 @@ main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
         ring_buffer_init(ring_buffer_heap);
+        ring_buffer_init(&ring_buffer_stack);
         ring_buffer_init(&ring_buffer);
 
         //
-        // first as a global variable
+        // first as a global variable (non-blocking)
         //
         create_thread(&c_1, &ring_buffer, entry_processor_thread);
         create_thread(&c_2, &ring_buffer, entry_processor_thread);
         sleep(1);
-        create_thread(&p_1, &ring_buffer, entry_publisher_thread);
-        create_thread(&p_2, &ring_buffer, entry_publisher_thread);
-        create_thread(&p_3, &ring_buffer, entry_publisher_thread);
+        create_thread(&p_1, &ring_buffer, entry_publisher_nonblocking_thread);
+        create_thread(&p_2, &ring_buffer, entry_publisher_nonblocking_thread);
+        create_thread(&p_3, &ring_buffer, entry_publisher_nonblocking_thread);
 
         // join entry publishers
         pthread_join(p_1, NULL);
@@ -166,17 +195,38 @@ main(int argc, char *argv[])
         // join entry processors
         pthread_join(c_1, NULL);
         pthread_join(c_2, NULL);
-        printf("As-Global-Variable test done\n\n");
+        printf("As-Global-Variable (non-blocking) test done\n\n");
+
 
         //
-        // Now as allocated on the heap
+        // then as a stack variable (blocking)
+        //
+        create_thread(&c_1, &ring_buffer_stack, entry_processor_thread);
+        create_thread(&c_2, &ring_buffer_stack, entry_processor_thread);
+        sleep(1);
+        create_thread(&p_1, &ring_buffer_stack, entry_publisher_blocking_thread);
+        create_thread(&p_2, &ring_buffer_stack, entry_publisher_blocking_thread);
+        create_thread(&p_3, &ring_buffer_stack, entry_publisher_blocking_thread);
+
+        // join entry publishers
+        pthread_join(p_1, NULL);
+        pthread_join(p_2, NULL);
+        pthread_join(p_3, NULL);
+
+        // join entry processors
+        pthread_join(c_1, NULL);
+        pthread_join(c_2, NULL);
+        printf("As-Global-Variable (blocking) test done\n\n");
+
+        //
+        // Now as allocated on the heap (blocking)
         //
         create_thread(&c_1, ring_buffer_heap, entry_processor_thread);
         create_thread(&c_2, ring_buffer_heap, entry_processor_thread);
         sleep(1);
-        create_thread(&p_1, ring_buffer_heap, entry_publisher_thread);
-        create_thread(&p_2, ring_buffer_heap, entry_publisher_thread);
-        create_thread(&p_3, ring_buffer_heap, entry_publisher_thread);
+        create_thread(&p_1, ring_buffer_heap, entry_publisher_blocking_thread);
+        create_thread(&p_2, ring_buffer_heap, entry_publisher_blocking_thread);
+        create_thread(&p_3, ring_buffer_heap, entry_publisher_blocking_thread);
 
         // join entry publishers
         pthread_join(p_1, NULL);
@@ -187,7 +237,7 @@ main(int argc, char *argv[])
         pthread_join(c_1, NULL);
         pthread_join(c_2, NULL);
         free(ring_buffer_heap);
-        printf("On-The-Heap test done\n");
+        printf("On-The-Heap (blocking) test done\n");
 
         return EXIT_SUCCESS;
 }
