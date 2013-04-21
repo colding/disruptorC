@@ -328,7 +328,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
 #define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                           \
 static inline int                                                                                                                                             \
 ring_buffer_prefix__ ## publisher_port_next_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,                                             \
-                                                           struct cursor_t * const cursor)                                                                    \
+                                                              struct cursor_t * const cursor)                                                                 \
 {                                                                                                                                                             \
         unsigned int n;                                                                                                                                       \
         struct cursor_t seq;                                                                                                                                  \
