@@ -147,14 +147,13 @@ main(int argc, char *argv[])
         entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
         entry->content = STOP;
         publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
-        printf("Publisher done\n");
 
         // join entry processor
         pthread_join(thread_id, NULL);
+        printf("Publisher done\n");
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
-
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Global-Variable non-blocking test done\n\n");
@@ -183,14 +182,13 @@ main(int argc, char *argv[])
         entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
         entry->content = STOP;
         publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
-        printf("Publisher done\n");
 
         // join entry processor
         pthread_join(thread_id, NULL);
+        printf("Publisher done\n");
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
-
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Global-Variable blocking test done\n\n");
@@ -221,14 +219,13 @@ main(int argc, char *argv[])
         entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
         entry->content = STOP;
         publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
-        printf("Publisher done\n");
 
         // join entry processor
         pthread_join(thread_id, NULL);
+        printf("Publisher done\n");
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
-
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Stack-Variable non-blocking test done\n\n");
@@ -257,14 +254,13 @@ main(int argc, char *argv[])
         entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
         entry->content = STOP;
         publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
-        printf("Publisher done\n");
 
         // join entry processor
         pthread_join(thread_id, NULL);
+        printf("Publisher done\n");
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
-
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Stack-Variable blocking test done\n\n");
@@ -295,14 +291,13 @@ main(int argc, char *argv[])
         entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
         entry->content = STOP;
         publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
-        printf("Publisher done\n");
 
         // join entry processor
         pthread_join(thread_id, NULL);
+        printf("Publisher done\n");
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
-
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("On-The-Heap non-blocking test done\n\n");
@@ -332,14 +327,13 @@ main(int argc, char *argv[])
         entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
         entry->content = STOP;
         publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
-        printf("Publisher done\n");
 
         // join entry processor
         pthread_join(thread_id, NULL);
+        printf("Publisher done\n");
 
         start_time = (double)start.tv_sec + (double)start.tv_usec/1000000.0;
         end_time = (double)end.tv_sec + (double)end.tv_usec/1000000.0;
-
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("On-The-Heap blocking test done\n");
