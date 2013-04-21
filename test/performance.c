@@ -338,7 +338,5 @@ main(int argc, char *argv[])
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("On-The-Heap blocking test done\n");
 
-
-
         return EXIT_SUCCESS;
 }
