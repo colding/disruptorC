@@ -317,13 +317,8 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
 }
 
 /*
- * Entry Publishers must call this function to get an entry to write
- * into.  I have found that __ATOMIC_ACQUIRE (in the __atomic_load_n)
- * is actually faster than __ATOMIC_RELAXED contrary to what I would
- * expect. Mayby other entry types will show otherwise.
- *
- * It is actually faster (at least on my machine) to do "x = 1 +
- * fetch_add(, 1)" instead of "x = add_fetch(, 1)".
+ * Like the blocking version. Returns 1 (one) if a new entry was
+ * acquired, 0 (zero) otherwise.
  */
 #define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                           \
 static inline int                                                                                                                                             \
@@ -339,7 +334,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_nonblocking(struct ring_buffer
         for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                                                          \
                 seq.sequence = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE);                                          \
                 if (seq.sequence < slowest_reader.sequence)                                                                                                   \
-                slowest_reader.sequence = seq.sequence;                                                                                                       \
+                        slowest_reader.sequence = seq.sequence;                                                                                               \
         }                                                                                                                                                     \
         if (UNLIKELY__(VACANT__ == slowest_reader.sequence))                                                                                                  \
                 slowest_reader.sequence = cursor->sequence - (ring_buffer->reduced_size.count & cursor->sequence);                                            \
