@@ -18,8 +18,6 @@
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
-
-#define YIELD() sched_yield()
 #include "src/disruptor.h"
 
 #define STOP UINT64_MAX

@@ -51,13 +51,6 @@
 #include "pagesize.h"
 #include "disruptor_types.h"
 
-#ifndef YIELD
-    #define VOLATILE volatile
-    #define YIELD() {}
-#else
-    #define VOLATILE
-#endif
-
 /*
  * Hints to the compiler whether an expression is likely to be true or
  * not
@@ -92,10 +85,10 @@
 #define DEFINE_RING_BUFFER_TYPE(entry_processor_capacity__, entry_capacity__, entry_type_name__, ring_buffer_type_name__) \
     struct ring_buffer_type_name__ {                                                                                      \
             struct count_t reduced_size;                                                                                  \
-            VOLATILE struct cursor_t slowest_entry_processor;                                                             \
-            VOLATILE struct cursor_t max_read_cursor;                                                                     \
-            VOLATILE struct cursor_t write_cursor;                                                                        \
-            VOLATILE struct cursor_t entry_processor_cursors[entry_processor_capacity__];                                 \
+            struct cursor_t slowest_entry_processor;                                                                      \
+            struct cursor_t max_read_cursor;                                                                              \
+            struct cursor_t write_cursor;                                                                                 \
+            struct cursor_t entry_processor_cursors[entry_processor_capacity__];                                          \
             struct entry_type_name__ buffer[entry_capacity__];                                                            \
     } __attribute__((aligned(PAGE_SIZE)))
 
@@ -225,7 +218,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct r
         struct cursor_t seq;                                                                                                  \
                                                                                                                               \
         while (cursor->sequence > (seq.sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE))) \
-                YIELD();                                                                                                      \
+                sched_yield();                                                                                                \
                                                                                                                               \
         cursor->sequence = seq.sequence;                                                                                      \
 }
@@ -294,7 +287,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
                 __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELEASE); \
                 if (LIKELY__((cursor->sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count))               \
                         return;                                                                                              \
-                YIELD();                                                                                                     \
+                sched_yield();                                                                                               \
         } while (1);                                                                                                         \
 }
 
@@ -341,7 +334,7 @@ ring_buffer_prefix__ ## publisher_port_commit_entry_blocking(struct ring_buffer_
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
                                                                                                                     \
         while (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE) != required_read_sequence) \
-                YIELD();                                                                                            \
+                sched_yield();                                                                                      \
                                                                                                                     \
         __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                            \
 }
