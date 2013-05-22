@@ -47,7 +47,7 @@ AC_TYPE_SSIZE_T
 AC_TYPE_UINT64_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([malloc memset])
+AC_CHECK_FUNCS([malloc memset sysconf])
 
 #
 # Check implementation details of build host
@@ -73,6 +73,27 @@ AC_COMPILE_IFELSE(
   	[
 		AC_MSG_RESULT([no])
 		AC_MSG_FAILURE([compiler support for __atomic builtins are required])
+	]
+)
+
+# Check for __atomic* builtins
+AC_MSG_CHECKING([for sysconf(_SC_PAGESIZE)])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[
+			#include <unistd.h>
+		        #include <stdio.h>
+  		]],
+  		[[
+			return (-1 == sysconf(_SC_PAGESIZE) ? 0 : 1;
+  		]]
+  	)],
+  	[
+		AC_MSG_RESULT([no])
+		AC_MSG_FAILURE([platform support for sysconf(_SC_PAGESIZE) is required])
+	],
+  	[
+		AC_MSG_RESULT([yes])
 	]
 )
 
@@ -223,6 +244,7 @@ dnl Makefiles
 dnl ******************************
 
 AC_CONFIG_FILES([Makefile
+		 src/Makefile	
 		 test/Makefile	
 	 ])
 AC_OUTPUT

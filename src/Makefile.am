@@ -1,4 +1,4 @@
-#  
+#
 #  Copyright (C) 2012 by Jules Colding <jcolding@gmail.com>.
 #
 #  All Rights Reserved.
@@ -8,13 +8,18 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-CWD = $(CURDIR)
-MKDIR=/bin/mkdir
-TAR=/bin/tar
+CWD=$(shell pwd)
 
-SUBDIRS = src test
+noinst_PROGRAMS = pagesize
+pagesize_SOURCES = pagesize.c
+AM_CFLAGS = $(DISRUPTORC_CFLAGS)
 
-ACLOCAL_AMFLAGS = -I m4
+all: pagesize pagesize.h
+	-rm pagesize.h
+	$(CWD)/pagesize
 
-DISTCLEANFILES = aclocal.m4 intltool-extract intltool-merge intltool-update iconv-detect.c Makefile.in Makefile *.tar.gz $(CLEAN_IN_FILES)
+pagesize.h: pagesize
 
+
+DISTCLEANFILES = $(BUILT_SOURCES) $(CLEAN_IN_FILES) Makefile.in Makefile pagesize pagesize.h
+CLEANFILES = *~

@@ -43,10 +43,12 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
+#include "pagesize.h"
 #include "disruptor_types.h"
 
 #ifndef YIELD
@@ -68,25 +70,6 @@
  * thereby vacant.
  */
 #define VACANT__ (UINT_FAST64_MAX)
-
-/*
- * Will return k iff k is a power of two, or the next power of two
- * which is greater than k.
- */
-static size_t
-next_power_of_two(size_t k)
-{
-        size_t i;
-
-        if (!k)
-                return 1;
-
-        --k;
-        for (i = 1; i < sizeof(size_t)*CHAR_BIT; i <<= 1)
-                k = k | k >> i;
-
-        return ++k;
-}
 
 /*
  * Cacheline padded elements of ring.
@@ -114,7 +97,7 @@ next_power_of_two(size_t k)
             VOLATILE struct cursor_t write_cursor;                                                                        \
             VOLATILE struct cursor_t entry_processor_cursors[entry_processor_capacity__];                                 \
             struct entry_type_name__ buffer[entry_capacity__];                                                            \
-    }
+    } __attribute__((aligned(PAGE_SIZE)))
 
 /*
  * This function returns a properly aligned ring buffer or NULL.
@@ -124,9 +107,8 @@ static struct ring_buffer_type_name__ *                                         
 ring_buffer_prefix__ ## ring_buffer_malloc(void)                                                                 \
 {                                                                                                                \
         struct ring_buffer_type_name__ *retv = NULL;                                                             \
-        const size_t alignment = next_power_of_two(CACHE_LINE_SIZE);                                             \
                                                                                                                  \
-        return (posix_memalign((void**)&retv, alignment, sizeof(struct ring_buffer_type_name__)) ? NULL : retv); \
+        return (posix_memalign((void**)&retv, PAGE_SIZE, sizeof(struct ring_buffer_type_name__)) ? NULL : retv); \
 }
 
 /*

@@ -23,8 +23,8 @@
 #include "src/disruptor.h"
 
 #define STOP UINT_FAST64_MAX
-#define ENTRIES_TO_GENERATE (50 * 1000 * 1000)
-#define ENTRY_BUFFER_SIZE (1024*8) // must be a power of two
+#define ENTRIES_TO_GENERATE (50 * 1000 * 1000 * 5)
+#define ENTRY_BUFFER_SIZE (1024*2) // must be a power of two
 #define MAX_ENTRY_PROCESSORS (1)
 
 DEFINE_ENTRY_TYPE(uint_fast64_t, entry_t);
@@ -316,8 +316,7 @@ main(int argc, char *argv[])
         reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
-                if (!publisher_port_next_entry_nonblocking(ring_buffer_heap, &cursor))
-                        continue;
+                publisher_port_next_entry_blocking(ring_buffer_heap, &cursor);
                 entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
                 entry->content = cursor.sequence;
                 publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
