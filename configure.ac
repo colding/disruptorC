@@ -76,7 +76,7 @@ AC_COMPILE_IFELSE(
 	]
 )
 
-# Check for __atomic* builtins
+# Check for sysconf(_SC_PAGESIZE)
 AC_MSG_CHECKING([for sysconf(_SC_PAGESIZE)])
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM(
@@ -97,6 +97,7 @@ AC_COMPILE_IFELSE(
 	]
 )
 
+# Check for cache line size
 AC_MSG_CHECKING([for cache line size])
 AC_RUN_IFELSE(
 	[AC_LANG_PROGRAM(

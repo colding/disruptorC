@@ -52,13 +52,13 @@ main(int argc, char **argv)
 	const long page_size = sysconf(_SC_PAGESIZE);
 
 	fd = open("pagesize.h", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	dprintf(fd, "#ifndef PAGESIZE_H      \n");
-	dprintf(fd, "#define PAGESIZE_H    \n\n");
-	dprintf(fd, "#ifdef PAGE_SIZE        \n");
-	dprintf(fd, "#undef PAGE_SIZE        \n");
-	dprintf(fd, "#endif                  \n");
-	dprintf(fd, "#define PAGE_SIZE (%ld) \n", page_size);
-	dprintf(fd, "#endif /* PAGESIZE_H */ \n");
+	dprintf(fd, "#ifndef PAGESIZE_H        \n");
+	dprintf(fd, "#define PAGESIZE_H      \n\n");
+	dprintf(fd, "#ifdef PAGE_SIZE          \n");
+	dprintf(fd, "#undef PAGE_SIZE          \n");
+	dprintf(fd, "#endif                    \n");
+	dprintf(fd, "#define PAGE_SIZE (%ld) \n\n", page_size);
+	dprintf(fd, "#endif /* PAGESIZE_H */   \n");
 	close(fd);
 
 	return EXIT_SUCCESS;

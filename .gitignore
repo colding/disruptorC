@@ -1,4 +1,5 @@
 *~
+*.o
 INSTALL
 Makefile
 Makefile.in
@@ -23,10 +24,11 @@ m4/ltversion.m4
 m4/lt~obsolete.m4
 missing
 stamp-h1
+src/.deps/
+src/pagesize
+src/pagesize.h
 test/.deps/
 test/Makefile
 test/Makefile.in
 test/correctness
-test/correctness.o
 test/performance
-test/performance.o
