@@ -21,5 +21,5 @@ all: pagesize pagesize.h
 pagesize.h: pagesize
 
 
-DISTCLEANFILES = $(BUILT_SOURCES) $(CLEAN_IN_FILES) Makefile.in Makefile pagesize pagesize.h
-CLEANFILES = *~
+DISTCLEANFILES = $(BUILT_SOURCES) $(CLEAN_IN_FILES) Makefile.in Makefile
+CLEANFILES = *~ pagesize pagesize.h
