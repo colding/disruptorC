@@ -215,7 +215,7 @@ static inline void                                                              
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer,   \
                                                                   struct cursor_t * const cursor)                             \
 {                                                                                                                             \
-        const struct cursor_t incur = { cursor->sequence };                                                                   \
+        const struct cursor_t incur = { cursor->sequence, { 0 } };	\
                                                                                                                               \
         while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED))                    \
                 sched_yield();                                                                                                \
@@ -233,7 +233,7 @@ static inline int                                                               
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_nonblocking(const struct ring_buffer_type_name__ * const ring_buffer, \
                                                                      struct cursor_t * const cursor)                           \
 {                                                                                                                              \
-        const struct cursor_t incur = { cursor->sequence };                                                                    \
+        const struct cursor_t incur = { cursor->sequence, { 0 } };	\
                                                                                                                                \
         while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED))                     \
                 return 0;                                                                                                      \
@@ -273,7 +273,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
         unsigned int n;                                                                                                      \
         struct cursor_t seq;                                                                                                 \
         struct cursor_t slowest_reader;                                                                                      \
-        const struct cursor_t incur = { 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELAXED) };  \
+        const struct cursor_t incur = { 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELAXED), { 0 } }; \
                                                                                                                              \
         cursor->sequence = incur.sequence;                                                                                   \
         do {                                                                                                                 \
@@ -304,7 +304,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_nonblocking(struct ring_buffer
         unsigned int n;                                                                                                                                     \
         struct cursor_t seq;                                                                                                                                \
         struct cursor_t slowest_reader;                                                                                                                     \
-        const struct cursor_t incur = { 1 + __atomic_load_n(&ring_buffer->write_cursor.sequence, __ATOMIC_RELAXED) };                                       \
+        const struct cursor_t incur = { 1 + __atomic_load_n(&ring_buffer->write_cursor.sequence, __ATOMIC_RELAXED), { 0 } }; \
                                                                                                                                                             \
         cursor->sequence = incur.sequence;                                                                                                                  \
         slowest_reader.sequence = VACANT__;                                                                                                                 \
