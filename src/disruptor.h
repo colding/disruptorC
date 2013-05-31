@@ -67,10 +67,10 @@
 /*
  * Cacheline padded elements of ring.
  */
-#define DEFINE_ENTRY_TYPE(content_type__, entry_type_name__)                                                            \
-    struct entry_type_name__ {                                                                                          \
-            content_type__ content;                                                                                     \
-            uint8_t padding[(CACHE_LINE_SIZE > sizeof(content_type__)) ? CACHE_LINE_SIZE - sizeof(content_type__) : 0]; \
+#define DEFINE_ENTRY_TYPE(content_type__, entry_type_name__)                                                                                                    \
+    struct entry_type_name__ {                                                                                                                                  \
+            content_type__ content;                                                                                                                             \
+            uint8_t padding[(CACHE_LINE_SIZE > sizeof(content_type__)) ? CACHE_LINE_SIZE - sizeof(content_type__) : (sizeof(uint_fast64_t) % CACHE_LINE_SIZE)]; \
     } __attribute__((aligned(CACHE_LINE_SIZE)))
 
 /*
