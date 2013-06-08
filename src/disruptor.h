@@ -55,7 +55,14 @@
  * Hints to the compiler whether an expression is likely to be true or
  * not
  */
+#ifdef LIKELY__
+#undef LIKELY__
+#endif
 #define LIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 1))
+
+#ifdef UNLIKELY__
+#undef UNLIKELY__
+#endif
 #define UNLIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 0))
 
 /*
