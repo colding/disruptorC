@@ -73,7 +73,7 @@ struct yield_t__ {
         struct timespec timeout;
         uint8_t padding[(CACHE_LINE_SIZE > sizeof(struct timespec)) ? (CACHE_LINE_SIZE - sizeof(struct timespec)) : (sizeof(struct timespec) % CACHE_LINE_SIZE)];
 } __attribute__((aligned(CACHE_LINE_SIZE)));
-static const struct yield_t__ timeout__ = { {0, 0}, { 0 } };
+static const struct yield_t__ timeout__ = { {0, 1}, { 0 } };
 
 /*
  * An entry processor cursor spot that has this value is not used and
