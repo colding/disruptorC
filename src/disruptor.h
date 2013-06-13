@@ -66,6 +66,16 @@
 #define UNLIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 0))
 
 /*
+ * Cacheline padded timeout value.
+ * Not intended for use elsewhere.
+ */
+struct yield_t__ {
+        struct timespec timeout;
+        uint8_t padding[(CACHE_LINE_SIZE > sizeof(struct timespec)) ? (CACHE_LINE_SIZE - sizeof(struct timespec)) : (sizeof(struct timespec) % CACHE_LINE_SIZE)];
+} __attribute__((aligned(CACHE_LINE_SIZE)));
+static const struct yield_t__ timeout__ = { {0, 0}, { 0 } };
+
+/*
  * An entry processor cursor spot that has this value is not used and
  * thereby vacant.
  */
@@ -225,7 +235,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct r
         const struct cursor_t incur = { cursor->sequence, { 0 } };                                                            \
                                                                                                                               \
         while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED))                    \
-                sched_yield();                                                                                                \
+                nanosleep(&timeout__.timeout, NULL);                                                                          \
                                                                                                                               \
         cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);                         \
 }
@@ -295,7 +305,7 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
                 __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELAXED);       \
                 if (LIKELY__((incur.sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count))                       \
                         return;                                                                                                    \
-                sched_yield();                                                                                                     \
+                nanosleep(&timeout__.timeout, NULL);                                                                               \
         } while (1);                                                                                                               \
 }
 
@@ -343,7 +353,7 @@ ring_buffer_prefix__ ## publisher_port_commit_entry_blocking(struct ring_buffer_
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
                                                                                                                     \
         while (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED) != required_read_sequence) \
-                sched_yield();                                                                                      \
+                nanosleep(&timeout__.timeout, NULL);                                                                \
                                                                                                                     \
         __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                            \
 }
