@@ -282,9 +282,9 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
  * It is actually faster (at least on my machine) to do "x = 1 +
  * fetch_add(, 1)" instead of "x = add_fetch(, 1)".
  */
-#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                   \
+#define DEFINE_ENTRY_PUBLISHER_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                       \
 static inline __attribute__((always_inline)) void                                                                                  \
-ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,                     \
+ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,                          \
                                                            struct cursor_t * const cursor)                                         \
 {                                                                                                                                  \
         unsigned int n;                                                                                                            \
@@ -313,9 +313,9 @@ ring_buffer_prefix__ ## publisher_port_next_entry_blocking(struct ring_buffer_ty
  * Like the blocking version. Returns 1 (one) if a new entry was
  * acquired, 0 (zero) otherwise.
  */
-#define DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                         \
+#define DEFINE_ENTRY_PUBLISHER_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                             \
 static inline int                                                                                                                                           \
-ring_buffer_prefix__ ## publisher_port_next_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,                                           \
+ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,                                                \
                                                               struct cursor_t * const cursor)                                                               \
 {                                                                                                                                                           \
         unsigned int n;                                                                                                                                     \
@@ -345,9 +345,9 @@ ring_buffer_prefix__ ## publisher_port_next_entry_nonblocking(struct ring_buffer
  * Entry Publishers must call this function to commit the entry to the
  * entry processors. Blocks until the entry has been committed.
  */
-#define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)  \
+#define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)      \
 static inline __attribute__((always_inline)) void                                                                   \
-ring_buffer_prefix__ ## publisher_port_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,    \
+ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,         \
                                                              const struct cursor_t * const cursor)                  \
 {                                                                                                                   \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
@@ -363,9 +363,9 @@ ring_buffer_prefix__ ## publisher_port_commit_entry_blocking(struct ring_buffer_
  * entry processors. Returns 1 (one) if the entry has been commited, 0
  * (zero) otherwise.
  */
-#define DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...) \
+#define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)     \
 static inline int                                                                                                     \
-ring_buffer_prefix__ ## publisher_port_commit_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,   \
+ring_buffer_prefix__ ## publisher_commit_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,        \
                                                                 const struct cursor_t * const cursor)                 \
 {                                                                                                                     \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                            \

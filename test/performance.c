@@ -35,9 +35,9 @@ DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
-DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHER_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHER_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 struct ring_buffer_t ring_buffer;
 struct timeval start;
@@ -134,17 +134,17 @@ main(int argc, char *argv[])
         gettimeofday(&start, NULL);
         do {
         again1:
-                if (!publisher_port_next_entry_nonblocking(&ring_buffer, &cursor))
+                if (!publisher_next_entry_nonblocking(&ring_buffer, &cursor))
                         goto again1;
                 entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
+                publisher_commit_entry_blocking(&ring_buffer, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(&ring_buffer, &cursor);
+        publisher_next_entry_blocking(&ring_buffer, &cursor);
         entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
+        publisher_commit_entry_blocking(&ring_buffer, &cursor);
 
         // join entry processor
         pthread_join(thread_id, NULL);
@@ -170,16 +170,16 @@ main(int argc, char *argv[])
         reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
-                publisher_port_next_entry_blocking(&ring_buffer, &cursor);
+                publisher_next_entry_blocking(&ring_buffer, &cursor);
                 entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
+                publisher_commit_entry_blocking(&ring_buffer, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(&ring_buffer, &cursor);
+        publisher_next_entry_blocking(&ring_buffer, &cursor);
         entry = ring_buffer_acquire_entry(&ring_buffer, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(&ring_buffer, &cursor);
+        publisher_commit_entry_blocking(&ring_buffer, &cursor);
 
         // join entry processor
         pthread_join(thread_id, NULL);
@@ -206,17 +206,17 @@ main(int argc, char *argv[])
         gettimeofday(&start, NULL);
         do {
         again2:
-                if (!publisher_port_next_entry_nonblocking(&ring_buffer_stack, &cursor))
+                if (!publisher_next_entry_nonblocking(&ring_buffer_stack, &cursor))
                         goto again2;
                 entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+                publisher_commit_entry_blocking(&ring_buffer_stack, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(&ring_buffer_stack, &cursor);
+        publisher_next_entry_blocking(&ring_buffer_stack, &cursor);
         entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+        publisher_commit_entry_blocking(&ring_buffer_stack, &cursor);
 
         // join entry processor
         pthread_join(thread_id, NULL);
@@ -242,16 +242,16 @@ main(int argc, char *argv[])
         reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
-                publisher_port_next_entry_blocking(&ring_buffer_stack, &cursor);
+                publisher_next_entry_blocking(&ring_buffer_stack, &cursor);
                 entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+                publisher_commit_entry_blocking(&ring_buffer_stack, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(&ring_buffer_stack, &cursor);
+        publisher_next_entry_blocking(&ring_buffer_stack, &cursor);
         entry = ring_buffer_acquire_entry(&ring_buffer_stack, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(&ring_buffer_stack, &cursor);
+        publisher_commit_entry_blocking(&ring_buffer_stack, &cursor);
 
         // join entry processor
         pthread_join(thread_id, NULL);
@@ -278,17 +278,17 @@ main(int argc, char *argv[])
         gettimeofday(&start, NULL);
         do {
         again3:
-                if (!publisher_port_next_entry_nonblocking(ring_buffer_heap, &cursor))
+                if (!publisher_next_entry_nonblocking(ring_buffer_heap, &cursor))
                         goto again3;
                 entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
+                publisher_commit_entry_blocking(ring_buffer_heap, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(ring_buffer_heap, &cursor);
+        publisher_next_entry_blocking(ring_buffer_heap, &cursor);
         entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
+        publisher_commit_entry_blocking(ring_buffer_heap, &cursor);
 
         // join entry processor
         pthread_join(thread_id, NULL);
@@ -314,16 +314,16 @@ main(int argc, char *argv[])
         reps = ENTRIES_TO_GENERATE;
         gettimeofday(&start, NULL);
         do {
-                publisher_port_next_entry_blocking(ring_buffer_heap, &cursor);
+                publisher_next_entry_blocking(ring_buffer_heap, &cursor);
                 entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
+                publisher_commit_entry_blocking(ring_buffer_heap, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(ring_buffer_heap, &cursor);
+        publisher_next_entry_blocking(ring_buffer_heap, &cursor);
         entry = ring_buffer_acquire_entry(ring_buffer_heap, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(ring_buffer_heap, &cursor);
+        publisher_commit_entry_blocking(ring_buffer_heap, &cursor);
 
         // join entry processor
         pthread_join(thread_id, NULL);

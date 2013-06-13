@@ -35,9 +35,9 @@ DEFINE_ENTRY_PROCESSOR_BARRIER_REGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_UNREGISTER_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_t);
 DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_t);
-DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_ENTRY_PUBLISHERPORT_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_t);
-DEFINE_ENTRY_PUBLISHERPORT_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHER_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHER_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_t);
+DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_t);
 
 struct ring_buffer_t ring_buffer;
 
@@ -75,17 +75,17 @@ entry_publisher_nonblocking_thread(void *arg)
 
         do {
         again:
-                if (!publisher_port_next_entry_nonblocking(buffer, &cursor))
+                if (!publisher_next_entry_nonblocking(buffer, &cursor))
                         goto again;
                 entry = ring_buffer_acquire_entry(buffer, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(buffer, &cursor);
+                publisher_commit_entry_blocking(buffer, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(buffer, &cursor);
+        publisher_next_entry_blocking(buffer, &cursor);
         entry = ring_buffer_acquire_entry(buffer, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(buffer, &cursor);
+        publisher_commit_entry_blocking(buffer, &cursor);
         printf("Publisher done\n");
 
         return NULL;
@@ -100,16 +100,16 @@ entry_publisher_blocking_thread(void *arg)
         uint64_t reps = ENTRIES_TO_GENERATE;
 
         do {
-                publisher_port_next_entry_blocking(buffer, &cursor);
+                publisher_next_entry_blocking(buffer, &cursor);
                 entry = ring_buffer_acquire_entry(buffer, &cursor);
                 entry->content = cursor.sequence;
-                publisher_port_commit_entry_blocking(buffer, &cursor);
+                publisher_commit_entry_blocking(buffer, &cursor);
         } while (--reps);
 
-        publisher_port_next_entry_blocking(buffer, &cursor);
+        publisher_next_entry_blocking(buffer, &cursor);
         entry = ring_buffer_acquire_entry(buffer, &cursor);
         entry->content = STOP;
-        publisher_port_commit_entry_blocking(buffer, &cursor);
+        publisher_commit_entry_blocking(buffer, &cursor);
         printf("Publisher done\n");
 
         return NULL;
