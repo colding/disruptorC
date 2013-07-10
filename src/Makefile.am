@@ -8,17 +8,14 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-CWD=$(shell pwd)
-
 noinst_PROGRAMS = pagesize
 pagesize_SOURCES = pagesize.c
 AM_CFLAGS = $(DISRUPTORC_CFLAGS)
 
 all: pagesize pagesize.h
-	-rm pagesize.h
-	$(CWD)/pagesize
 
 pagesize.h: pagesize
+	$(srcdir)/pagesize
 
 
 DISTCLEANFILES = $(BUILT_SOURCES) $(CLEAN_IN_FILES) Makefile.in Makefile

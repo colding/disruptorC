@@ -37,6 +37,7 @@
  * SUCH DAMAGE.
  */
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,18 +49,26 @@
 int
 main(int argc, char **argv)
 {
-	int fd;
-	const long page_size = sysconf(_SC_PAGESIZE);
+        int fd;
+        const long page_size = sysconf(_SC_PAGESIZE);
 
-	fd = open("pagesize.h", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	dprintf(fd, "#ifndef PAGESIZE_H        \n");
-	dprintf(fd, "#define PAGESIZE_H      \n\n");
-	dprintf(fd, "#ifdef PAGE_SIZE          \n");
-	dprintf(fd, "#undef PAGE_SIZE          \n");
-	dprintf(fd, "#endif                    \n");
-	dprintf(fd, "#define PAGE_SIZE (%ld) \n\n", page_size);
-	dprintf(fd, "#endif /* PAGESIZE_H */   \n");
-	close(fd);
+        if (-1 == page_size)
+                abort();
 
-	return EXIT_SUCCESS;
+        if (unlink("pagesize.h")) {
+                if (ENOENT != errno)
+                        abort();
+        }
+
+        fd = open("pagesize.h", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        dprintf(fd, "#ifndef PAGESIZE_H        \n");
+        dprintf(fd, "#define PAGESIZE_H      \n\n");
+        dprintf(fd, "#ifdef PAGE_SIZE          \n");
+        dprintf(fd, "#undef PAGE_SIZE          \n");
+        dprintf(fd, "#endif                    \n");
+        dprintf(fd, "#define PAGE_SIZE (%ld) \n\n", page_size);
+        dprintf(fd, "#endif /* PAGESIZE_H */   \n");
+        close(fd);
+
+        return EXIT_SUCCESS;
 }
