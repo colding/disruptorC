@@ -40,16 +40,15 @@
 #ifndef DISRUPTORC_H
 #define DISRUPTORC_H
 
+#include "disruptor_types.h"
+
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
-#include "pagesize.h"
-#include "disruptor_types.h"
 
 /*
  * Hints to the compiler whether an expression is likely to be true or

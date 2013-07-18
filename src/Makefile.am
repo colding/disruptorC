@@ -8,15 +8,15 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-noinst_PROGRAMS = pagesize
-pagesize_SOURCES = pagesize.c
+noinst_PROGRAMS = memsizes
+memsizes_SOURCES = memsizes.c
 AM_CFLAGS = $(DISRUPTORC_CFLAGS)
 
-all: pagesize pagesize.h
+all: memsizes memsizes.h
 
-pagesize.h: pagesize
-	$(srcdir)/pagesize
+memsizes.h: memsizes
+	$(srcdir)/memsizes
 
 
 DISTCLEANFILES = $(BUILT_SOURCES) $(CLEAN_IN_FILES) Makefile.in Makefile
-CLEANFILES = *~ pagesize pagesize.h
+CLEANFILES = *~ memsizes memsizes.h

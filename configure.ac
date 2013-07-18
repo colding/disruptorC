@@ -76,28 +76,31 @@ AC_COMPILE_IFELSE(
 	]
 )
 
-# Check for sysconf(_SC_PAGESIZE)
+# Check for sysconf(_SC_PAGESIZE) - Used by disruptorC
 AC_MSG_CHECKING([for sysconf(_SC_PAGESIZE)])
-AC_COMPILE_IFELSE(
+AC_RUN_IFELSE(
 	[AC_LANG_PROGRAM(
 		[[
 			#include <unistd.h>
-		        #include <stdio.h>
-  		]],
-  		[[
-			return (-1 == sysconf(_SC_PAGESIZE) ? 0 : 1;
-  		]]
-  	)],
-  	[
+		]],
+		[[
+			return (-1 != sysconf(_SC_PAGESIZE)) ? 0 : 1;
+		]]
+	)],
+	[
+		AC_MSG_RESULT([ok])
+	],
+	[
 		AC_MSG_RESULT([no])
 		AC_MSG_FAILURE([platform support for sysconf(_SC_PAGESIZE) is required])
 	],
-  	[
-		AC_MSG_RESULT([yes])
+	[
+		AC_MSG_RESULT([no])
+		AC_MSG_FAILURE([platform support for sysconf(_SC_PAGESIZE) is required])
 	]
 )
 
-# Check for cache line size
+# Check for cache line size - Used by disruptorC
 AC_MSG_CHECKING([for cache line size])
 AC_RUN_IFELSE(
 	[AC_LANG_PROGRAM(
@@ -116,34 +119,36 @@ AC_RUN_IFELSE(
 			#if defined __APPLE__
 			        size_t line_size = 0;
 			        size_t sizeof_line_size = sizeof(line_size);
-			        sysctlbyname("hw.cachelinesize", &line_size, &sizeof_line_size, 0, 0);
-			        return line_size;
+			        if (sysctlbyname("hw.cachelinesize", &line_size, &sizeof_line_size, 0, 0))
+				        return 1;
+			        return 0;
 			#elif defined __linux__
 				FILE *p = 0;
 				p = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
 				unsigned int i = 0;
 				if (p) {
-				        fscanf(p, "%d", &i);
+				        if (1 != fscanf(p, "%u", &i))
+					        return 1;
 				        fclose(p);
+				} else {
+                                        return 1;
 				}
-				return i;
-			#else
 				return 0;
+			#else
+				return 1;
 			#endif
 		]]
 	)],
 	[
-		cache_line_size=0
+		AC_MSG_RESULT([ok])
 	],
 	[
-		cache_line_size=$?
+		AC_MSG_FAILURE([could not deduce cache line size])
 	],
 	[
 		AC_MSG_FAILURE([could not deduce cache line size])
 	]
 )
-AC_DEFINE_UNQUOTED([CACHE_LINE_SIZE], [($cache_line_size)], [Define to value of cache line size])
-AC_MSG_RESULT($cache_line_size)
 
 target=`uname`
 case "x$target" in
@@ -252,6 +257,5 @@ AC_OUTPUT
 echo "\
 
 	Target Platform:           $target
-	Cache line size:	   $cache_line_size
 	DISRUPTORC_CFLAGS:         $DISRUPTORC_CFLAGS
 "

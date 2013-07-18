@@ -45,13 +45,14 @@
 #ifdef HAVE_CONFIG_H
     #include "ac_config.h"
 #endif
+#include "memsizes.h"
 
 /*
  * Cacheline padded counter.
  */
 struct count_t {
         uint_fast64_t count;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? (CACHE_LINE_SIZE - sizeof(uint_fast64_t)) : (sizeof(uint_fast64_t) % CACHE_LINE_SIZE)];
+        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? CACHE_LINE_SIZE - sizeof(uint_fast64_t) : 0];
 } __attribute__((aligned(CACHE_LINE_SIZE)));
 
 /*
@@ -59,7 +60,7 @@ struct count_t {
  */
 struct cursor_t {
         uint_fast64_t sequence;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? (CACHE_LINE_SIZE - sizeof(uint_fast64_t)) : (sizeof(uint_fast64_t) % CACHE_LINE_SIZE)];
+        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? CACHE_LINE_SIZE - sizeof(uint_fast64_t) : 0];
 } __attribute__((aligned(CACHE_LINE_SIZE)));
 
 #endif //  DISRUPTORC_TYPES_H

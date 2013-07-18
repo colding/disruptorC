@@ -42,8 +42,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#ifdef HAVE_CONFIG_H
-    #include "ac_config.h"
+#include <stddef.h>
+
+#if defined __APPLE__
+    #include <sys/sysctl.h>
+#elif defined __linux__
+    #include <stdio.h>
+#else
+    #error unrecognized platform
 #endif
 
 int
@@ -51,23 +57,46 @@ main(int argc, char **argv)
 {
         int fd;
         const long page_size = sysconf(_SC_PAGESIZE);
+        size_t cache_line_size = 0;
 
         if (-1 == page_size)
                 abort();
 
-        if (unlink("pagesize.h")) {
+        if (unlink("memsizes.h")) {
                 if (ENOENT != errno)
                         abort();
         }
 
-        fd = open("pagesize.h", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        dprintf(fd, "#ifndef PAGESIZE_H        \n");
-        dprintf(fd, "#define PAGESIZE_H      \n\n");
+#if defined __APPLE__
+        size_t sizeof_line_size = sizeof(cache_line_size);
+        if (sysctlbyname("hw.cachelinesize", &cache_line_size, &sizeof_line_size, 0, 0))
+                abort();
+#elif defined __linux__
+        FILE *p = NULL;
+        p = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
+        if (p) {
+                if (1 != fscanf(p, "%u", &cache_line_size))
+			abort();
+                fclose(p);
+        } else {
+                abort();
+        }
+#endif
+        if (0 == cache_line_size)
+                abort();
+
+        fd = open("memsizes.h", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        dprintf(fd, "#ifndef MEM_SIZES_H        \n");
+        dprintf(fd, "#define MEM_SIZES_H      \n\n");
         dprintf(fd, "#ifdef PAGE_SIZE          \n");
         dprintf(fd, "#undef PAGE_SIZE          \n");
         dprintf(fd, "#endif                    \n");
         dprintf(fd, "#define PAGE_SIZE (%ld) \n\n", page_size);
-        dprintf(fd, "#endif /* PAGESIZE_H */   \n");
+        dprintf(fd, "#ifdef CACHE_LINE_SIZE          \n");
+        dprintf(fd, "#undef CACHE_LINE_SIZE          \n");
+        dprintf(fd, "#endif                    \n");
+        dprintf(fd, "#define CACHE_LINE_SIZE (%ld) \n\n", cache_line_size);
+        dprintf(fd, "#endif /* MEM_SIZES_H */   \n");
         close(fd);
 
         return EXIT_SUCCESS;

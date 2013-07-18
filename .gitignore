@@ -26,8 +26,8 @@ m4/lt~obsolete.m4
 missing
 stamp-h1
 src/.deps/
-src/pagesize
-src/pagesize.h
+src/memsizes
+src/memsizes.h
 test/.deps/
 test/Makefile
 test/Makefile.in
