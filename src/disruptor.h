@@ -334,7 +334,7 @@ ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type
         __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELAXED);                                        \
         if (LIKELY__((incur.sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count)) {                                                      \
                 seq.sequence = incur.sequence - 1;                                                                                                          \
-                if (__atomic_compare_exchange_n(&ring_buffer->write_cursor.sequence, &seq.sequence, incur.sequence, 1, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) \
+                if (__atomic_compare_exchange_n(&ring_buffer->write_cursor.sequence, &seq.sequence, incur.sequence, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) \
                         return 1;                                                                                                                           \
         }                                                                                                                                                   \
         return 0;                                                                                                                                           \
