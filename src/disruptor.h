@@ -229,7 +229,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_unregister(struct ring_buffer_ty
 #define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)            \
 static inline void                                                                                                            \
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer,   \
-                                                                  struct cursor_t * const cursor)                             \
+                                                                  struct cursor_t * __restrict__ const cursor)                \
 {                                                                                                                             \
         const struct cursor_t incur = { cursor->sequence, { 0 } };                                                            \
                                                                                                                               \
@@ -247,7 +247,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct r
 #define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)          \
 static inline int                                                                                                              \
 ring_buffer_prefix__ ## entry_processor_barrier_wait_for_nonblocking(const struct ring_buffer_type_name__ * const ring_buffer, \
-                                                                     struct cursor_t * const cursor)                           \
+                                                                     struct cursor_t * __restrict__ const cursor)              \
 {                                                                                                                              \
         const struct cursor_t incur = { cursor->sequence, { 0 } };                                                             \
                                                                                                                                \
@@ -266,8 +266,8 @@ ring_buffer_prefix__ ## entry_processor_barrier_wait_for_nonblocking(const struc
 #define DEFINE_ENTRY_PROCESSOR_BARRIER_RELEASEENTRY_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                               \
 static inline void                                                                                                                           \
 ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer_type_name__ * const ring_buffer,                            \
-                                                              const struct count_t * const entry_processor_number,                           \
-                                                              const struct cursor_t * const cursor)                                          \
+                                                              const struct count_t * __restrict__ const entry_processor_number,              \
+                                                              const struct cursor_t * __restrict__ const cursor)                             \
 {                                                                                                                                            \
         __atomic_store_n(&ring_buffer->entry_processor_cursors[entry_processor_number->count].sequence, cursor->sequence, __ATOMIC_RELAXED); \
 }
@@ -284,7 +284,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
 #define DEFINE_ENTRY_PUBLISHER_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                       \
 static inline __attribute__((always_inline)) void                                                                                  \
 ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,                          \
-                                                           struct cursor_t * const cursor)                                         \
+                                                           struct cursor_t * __restrict__ const cursor)                            \
 {                                                                                                                                  \
         unsigned int n;                                                                                                            \
         struct cursor_t seq;                                                                                                       \
@@ -315,7 +315,7 @@ ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_na
 #define DEFINE_ENTRY_PUBLISHER_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                             \
 static inline int                                                                                                                                           \
 ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,                                                \
-                                                              struct cursor_t * const cursor)                                                               \
+                                                              struct cursor_t * __restrict__ const cursor)                                                  \
 {                                                                                                                                                           \
         unsigned int n;                                                                                                                                     \
         struct cursor_t seq;                                                                                                                                \
@@ -347,7 +347,7 @@ ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type
 #define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)      \
 static inline __attribute__((always_inline)) void                                                                   \
 ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,         \
-                                                             const struct cursor_t * const cursor)                  \
+                                                             const struct cursor_t * __restrict__ const cursor)     \
 {                                                                                                                   \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
                                                                                                                     \
@@ -365,7 +365,7 @@ ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_
 #define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)     \
 static inline int                                                                                                     \
 ring_buffer_prefix__ ## publisher_commit_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,        \
-                                                                const struct cursor_t * const cursor)                 \
+                                                                const struct cursor_t * __restrict__ const cursor)    \
 {                                                                                                                     \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                            \
                                                                                                                       \
