@@ -189,7 +189,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_register(struct ring_buffer_type
                 for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                               \
                         if (__atomic_compare_exchange_n(&ring_buffer->entry_processor_cursors[n].sequence,                                 \
                                                         &vacant,                                                                           \
-                                                        __atomic_load_n(&ring_buffer->slowest_entry_processor.sequence, __ATOMIC_ACQUIRE), \
+                                                        __atomic_load_n(&ring_buffer->slowest_entry_processor.sequence, __ATOMIC_CONSUME), \
                                                         1,                                                                                 \
                                                         __ATOMIC_RELEASE,                                                                  \
                                                         __ATOMIC_RELAXED)) {                                                               \
