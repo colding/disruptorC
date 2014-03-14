@@ -75,7 +75,7 @@ main(int argc, char **argv)
         FILE *p = NULL;
         p = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
         if (p) {
-                if (1 != fscanf(p, "%u", &cache_line_size))
+                if (1 != fscanf(p, "%zu", &cache_line_size))
 			abort();
                 fclose(p);
         } else {
