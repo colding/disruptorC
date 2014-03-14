@@ -95,7 +95,7 @@ main(int argc, char **argv)
         dprintf(fd, "#ifdef CACHE_LINE_SIZE          \n");
         dprintf(fd, "#undef CACHE_LINE_SIZE          \n");
         dprintf(fd, "#endif                    \n");
-        dprintf(fd, "#define CACHE_LINE_SIZE (%ld) \n\n", cache_line_size);
+        dprintf(fd, "#define CACHE_LINE_SIZE (%zu) \n\n", cache_line_size);
         dprintf(fd, "#endif /* MEM_SIZES_H */   \n");
         close(fd);
 
