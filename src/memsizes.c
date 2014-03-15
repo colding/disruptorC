@@ -75,7 +75,7 @@ main(int argc, char **argv)
         FILE *p = NULL;
         p = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
         if (p) {
-                if (1 != fscanf(p, "%u", &cache_line_size))
+                if (1 != fscanf(p, "%zu", &cache_line_size))
 			abort();
                 fclose(p);
         } else {
@@ -95,7 +95,7 @@ main(int argc, char **argv)
         dprintf(fd, "#ifdef CACHE_LINE_SIZE          \n");
         dprintf(fd, "#undef CACHE_LINE_SIZE          \n");
         dprintf(fd, "#endif                    \n");
-        dprintf(fd, "#define CACHE_LINE_SIZE (%ld) \n\n", cache_line_size);
+        dprintf(fd, "#define CACHE_LINE_SIZE (%zu) \n\n", cache_line_size);
         dprintf(fd, "#endif /* MEM_SIZES_H */   \n");
         close(fd);
 
