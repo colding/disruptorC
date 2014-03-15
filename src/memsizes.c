@@ -50,6 +50,8 @@
     #include <sys/sysctl.h>
 #elif defined __linux__
     #include <stdio.h>
+#elif (defined(__FreeBSD__) || defined(__NetBSD__))
+    #include <sys/param.h>
 #else
     #error unrecognized platform
 #endif
@@ -83,6 +85,8 @@ main(int argc, char **argv)
         } else {
                 abort();
         }
+#elif (defined(__FreeBSD__) || defined(__NetBSD__))
+        cache_line_size = CACHE_LINE_SIZE;
 #endif
         if (0 == cache_line_size)
                 abort();

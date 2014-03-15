@@ -111,6 +111,8 @@ AC_RUN_IFELSE(
 			        #include <sys/sysctl.h>
 			#elif defined __linux__
 			        #include <stdio.h>
+			#elif (defined(__FreeBSD__) || defined(__NetBSD__))
+				#include <sys/param.h>
 			#else
 				#error unrecognized platform
 			#endif
@@ -133,6 +135,8 @@ AC_RUN_IFELSE(
 				} else {
                                         return 1;
 				}
+				return 0;
+			#elif defined CACHE_LINE_SIZE
 				return 0;
 			#else
 				return 1;
@@ -159,6 +163,14 @@ case "x$target" in
 	xLinux)
 	AM_CONDITIONAL(OS_DARWIN, false)
 	AM_CONDITIONAL(OS_LINUX, true)
+	;;
+	xFreeBSD)
+	AM_CONDITIONAL(OS_DARWIN, false)
+	AM_CONDITIONAL(OS_LINUX, false)
+	;;
+	xNetBSD)
+	AM_CONDITIONAL(OS_DARWIN, false)
+	AM_CONDITIONAL(OS_LINUX, false)
 	;;
 	*)
 	AC_MSG_ERROR([disruptorC is not supported on this operating system])
