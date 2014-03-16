@@ -157,20 +157,12 @@ AC_RUN_IFELSE(
 target=`uname`
 case "x$target" in
 	xDarwin)
-	AM_CONDITIONAL(OS_DARWIN, true)
-	AM_CONDITIONAL(OS_LINUX, false)
 	;;
 	xLinux)
-	AM_CONDITIONAL(OS_DARWIN, false)
-	AM_CONDITIONAL(OS_LINUX, true)
 	;;
 	xFreeBSD)
-	AM_CONDITIONAL(OS_DARWIN, false)
-	AM_CONDITIONAL(OS_LINUX, false)
 	;;
 	xNetBSD)
-	AM_CONDITIONAL(OS_DARWIN, false)
-	AM_CONDITIONAL(OS_LINUX, false)
 	;;
 	*)
 	AC_MSG_ERROR([disruptorC is not supported on this operating system])
