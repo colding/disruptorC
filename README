@@ -2,7 +2,7 @@ disruptorC
 
 C implementation of LMAX's disruptor pattern.
 
-Tested on Mac OS X 10.8.3 (gcc 4.8.0) and Fedora 18.
+Tested on Mac OS X 10.8.3 (gcc 4.8.0), Fedora 18, and FreeBSD 10.0 (clang 3.3).
 
 Build by:
 
