@@ -9,7 +9,7 @@ Build by:
       ./bootstrap 
       make
 
-Then run the tests i test/.
+Then run the tests in test/.
 
 
 TODO: 
