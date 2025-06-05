@@ -108,6 +108,7 @@ static const struct yield_t__ timeout__ = { {0, 1}, { 0 } };
             struct entry_type_name__ buffer[entry_capacity__];                                                            \
     } __attribute__((aligned(PAGE_SIZE)))
 
+
 /*
  * This function returns a properly aligned ring buffer or NULL.
  */
@@ -289,24 +290,25 @@ ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_na
         unsigned int n;                                                                                                            \
         struct cursor_t seq;                                                                                                       \
         struct cursor_t slowest_reader;                                                                                            \
-        const struct cursor_t incur = { 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELAXED), { 0 } }; \
+        const struct cursor_t incur = { 1 + __atomic_fetch_add(&ring_buffer->write_cursor.sequence, 1, __ATOMIC_RELEASE), { 0 } }; \
                                                                                                                                    \
         cursor->sequence = incur.sequence;                                                                                         \
         do {                                                                                                                       \
                 slowest_reader.sequence = VACANT__;                                                                                \
                 for (n = 0; n < sizeof(ring_buffer->entry_processor_cursors)/sizeof(struct cursor_t); ++n) {                       \
-                        seq.sequence = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_RELAXED);       \
+                        seq.sequence = __atomic_load_n(&ring_buffer->entry_processor_cursors[n].sequence, __ATOMIC_ACQUIRE);       \
                         if (seq.sequence < slowest_reader.sequence)                                                                \
                                 slowest_reader.sequence = seq.sequence;                                                            \
                 }                                                                                                                  \
                 if (UNLIKELY__(VACANT__ == slowest_reader.sequence))                                                               \
                         slowest_reader.sequence = incur.sequence - (ring_buffer->reduced_size.count & incur.sequence);             \
-                __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELAXED);       \
+                __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELEASE);       \
                 if (LIKELY__((incur.sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count))                       \
                         return;                                                                                                    \
                 nanosleep(&timeout__.timeout, NULL);                                                                               \
         } while (1);                                                                                                               \
 }
+
 
 /*
  * Like the blocking version. Returns 1 (one) if a new entry was
