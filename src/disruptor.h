@@ -65,18 +65,17 @@
 #define UNLIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 0))
 
 /*
- * Cacheline padded timeout value.
- * Not intended for use elsewhere.
+ * Then umber of times __builtin_ia32_pause() is being called before sched_yield().
+ * Please expriment and find the best value for your use case and hardware.
  */
-struct yield_t__ {
-        struct timespec timeout;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(struct timespec)) ? (CACHE_LINE_SIZE - sizeof(struct timespec)) : (sizeof(struct timespec) % CACHE_LINE_SIZE)];
-} __attribute__((aligned(CACHE_LINE_SIZE)));
-static const struct yield_t__ timeout__ = { {0, 1}, { 0 } };
+#ifdef BUILTIN_WAIT_COUNT__
+#undef BUILTIN_WAIT_COUNT__
+#endif
+#define BUILTIN_WAIT_COUNT__ (5120)
 
 /*
  * An entry processor cursor spot that has this value is not used and
- * thereby vacant.
+ * is thereby vacant.
  */
 #define VACANT__ (UINT_FAST64_MAX)
 
@@ -234,9 +233,12 @@ ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct r
 {                                                                                                                             \
         const struct cursor_t incur = { cursor->sequence, { 0 } };                                                            \
                                                                                                                               \
-        while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED))                    \
-                nanosleep(&timeout__.timeout, NULL);                                                                          \
-                                                                                                                              \
+        while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED)) {                  \
+                for (int i = 0; i < BUILTIN_WAIT_COUNT__; ++i) {                                                              \
+                        __builtin_ia32_pause();                                                                               \
+                }                                                                                                             \
+                sched_yield();                                                                                                \
+        }                                                                                                                     \
         cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);                         \
 }
 
@@ -305,7 +307,10 @@ ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_na
                 __atomic_store_n(&ring_buffer->slowest_entry_processor.sequence, slowest_reader.sequence, __ATOMIC_RELEASE);       \
                 if (LIKELY__((incur.sequence - slowest_reader.sequence) <= ring_buffer->reduced_size.count))                       \
                         return;                                                                                                    \
-                nanosleep(&timeout__.timeout, NULL);                                                                               \
+                for (int i = 0; i < BUILTIN_WAIT_COUNT__; ++i) {                                                                   \
+                        __builtin_ia32_pause();                                                                                    \
+                }                                                                                                                  \
+                sched_yield();                                                                                                     \
         } while (1);                                                                                                               \
 }
 
@@ -346,17 +351,21 @@ ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type
  * Entry Publishers must call this function to commit the entry to the
  * entry processors. Blocks until the entry has been committed.
  */
-#define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)      \
-static inline __attribute__((always_inline)) void                                                                   \
-ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,         \
-                                                             const struct cursor_t * __restrict__ const cursor)     \
-{                                                                                                                   \
-        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                          \
-                                                                                                                    \
-        while (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED) != required_read_sequence) \
-                nanosleep(&timeout__.timeout, NULL);                                                                \
-                                                                                                                    \
-        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                            \
+#define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)         \
+static inline __attribute__((always_inline)) void                                                                      \
+ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,            \
+                                                             const struct cursor_t * __restrict__ const cursor)        \
+{                                                                                                                      \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                             \
+                                                                                                                       \
+        while (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED) != required_read_sequence) {  \
+                for (int i = 0; i < BUILTIN_WAIT_COUNT__; ++i) {                                                       \
+                        __builtin_ia32_pause();                                                                        \
+                }                                                                                                      \
+                sched_yield();                                                                                         \
+        }                                                                                                              \
+                                                                                                                       \
+        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                               \
 }
 
 /*
