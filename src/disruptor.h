@@ -1,5 +1,5 @@
 /*
- *    Copyright (C) 2012-2013, Jules Colding <jcolding@gmail.com>.
+ *    Copyright (C) 2012-2025, Jules Colding <jcolding@gmail.com>.
  *
  *    All Rights Reserved.
  */
@@ -65,8 +65,8 @@
 #define UNLIKELY__(expr__) (__builtin_expect(((expr__) ? 1 : 0), 0))
 
 /*
- * Then umber of times __builtin_ia32_pause() is being called before sched_yield().
- * Please expriment and find the best value for your use case and hardware.
+ * The number of times __builtin_ia32_pause() is being called before sched_yield().
+ * Please experiment and find the best value for your use case and hardware.
  */
 #ifdef BUILTIN_WAIT_COUNT__
 #undef BUILTIN_WAIT_COUNT__
@@ -226,20 +226,20 @@ ring_buffer_prefix__ ## entry_processor_barrier_unregister(struct ring_buffer_ty
  * entry_processor_cursors array, by way of the register function, to
  * know with which sequence number to begin.
  */
-#define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)            \
-static inline void                                                                                                            \
-ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer,   \
-                                                                  struct cursor_t * __restrict__ const cursor)                \
-{                                                                                                                             \
-        const struct cursor_t incur = { cursor->sequence, { 0 } };                                                            \
-                                                                                                                              \
-        while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED)) {                  \
-                for (int i = 0; i < BUILTIN_WAIT_COUNT__; ++i) {                                                              \
-                        __builtin_ia32_pause();                                                                               \
-                }                                                                                                             \
-                sched_yield();                                                                                                \
-        }                                                                                                                     \
-        cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);                         \
+#define DEFINE_ENTRY_PROCESSOR_BARRIER_WAITFOR_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)          \
+static inline void                                                                                                          \
+ring_buffer_prefix__ ## entry_processor_barrier_wait_for_blocking(const struct ring_buffer_type_name__ * const ring_buffer, \
+                                                                  struct cursor_t * __restrict__ const cursor)              \
+{                                                                                                                           \
+        const struct cursor_t incur = { cursor->sequence, { 0 } };                                                          \
+                                                                                                                            \
+        while (incur.sequence > __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED)) {                \
+                for (int i = 0; i < BUILTIN_WAIT_COUNT__; ++i) {                                                            \
+                        __builtin_ia32_pause();                                                                             \
+                }                                                                                                           \
+                sched_yield();                                                                                              \
+        }                                                                                                                   \
+        cursor->sequence = __atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_ACQUIRE);                       \
 }
 
 /*
@@ -287,7 +287,7 @@ ring_buffer_prefix__ ## entry_processor_barrier_release_entry(struct ring_buffer
 #define DEFINE_ENTRY_PUBLISHER_NEXTENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                       \
 static inline __attribute__((always_inline)) void                                                                                  \
 ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,                          \
-                                                           struct cursor_t * __restrict__ const cursor)                            \
+                                                      struct cursor_t * __restrict__ const cursor)                                 \
 {                                                                                                                                  \
         unsigned int n;                                                                                                            \
         struct cursor_t seq;                                                                                                       \
@@ -322,7 +322,7 @@ ring_buffer_prefix__ ## publisher_next_entry_blocking(struct ring_buffer_type_na
 #define DEFINE_ENTRY_PUBLISHER_NEXTENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)                                             \
 static inline int                                                                                                                                           \
 ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,                                                \
-                                                              struct cursor_t * __restrict__ const cursor)                                                  \
+                                                         struct cursor_t * __restrict__ const cursor)                                                       \
 {                                                                                                                                                           \
         unsigned int n;                                                                                                                                     \
         struct cursor_t seq;                                                                                                                                \
@@ -354,7 +354,7 @@ ring_buffer_prefix__ ## publisher_next_entry_nonblocking(struct ring_buffer_type
 #define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_BLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)         \
 static inline __attribute__((always_inline)) void                                                                      \
 ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_name__ * const ring_buffer,            \
-                                                             const struct cursor_t * __restrict__ const cursor)        \
+                                                        const struct cursor_t * __restrict__ const cursor)             \
 {                                                                                                                      \
         const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                             \
                                                                                                                        \
@@ -373,19 +373,19 @@ ring_buffer_prefix__ ## publisher_commit_entry_blocking(struct ring_buffer_type_
  * entry processors. Returns 1 (one) if the entry has been commited, 0
  * (zero) otherwise.
  */
-#define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...)     \
-static inline int                                                                                                     \
-ring_buffer_prefix__ ## publisher_commit_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,        \
-                                                                const struct cursor_t * __restrict__ const cursor)    \
-{                                                                                                                     \
-        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                            \
-                                                                                                                      \
-        if (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED) != required_read_sequence)      \
-                return 0;                                                                                             \
-                                                                                                                      \
-        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                              \
-                                                                                                                      \
-        return 1;                                                                                                     \
+#define DEFINE_ENTRY_PUBLISHER_COMMITENTRY_NONBLOCKING_FUNCTION(ring_buffer_type_name__, ring_buffer_prefix__...) \
+static inline int                                                                                                 \
+ring_buffer_prefix__ ## publisher_commit_entry_nonblocking(struct ring_buffer_type_name__ * const ring_buffer,    \
+                                                           const struct cursor_t * __restrict__ const cursor)     \
+{                                                                                                                 \
+        const uint_fast64_t required_read_sequence = cursor->sequence - 1;                                        \
+                                                                                                                  \
+        if (__atomic_load_n(&ring_buffer->max_read_cursor.sequence, __ATOMIC_RELAXED) != required_read_sequence)  \
+                return 0;                                                                                         \
+                                                                                                                  \
+        __atomic_fetch_add(&ring_buffer->max_read_cursor.sequence, 1, __ATOMIC_RELEASE);                          \
+                                                                                                                  \
+        return 1;                                                                                                 \
 }
 
 #endif //  DISRUPTORC_H

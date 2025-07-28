@@ -1,5 +1,5 @@
 /*
- *    Copyright (C) 2012-2013, Jules Colding <jcolding@gmail.com>.
+ *    Copyright (C) 2012-2025, Jules Colding <jcolding@gmail.com>.
  *
  *    All Rights Reserved.
  */
