@@ -34,3 +34,4 @@ test/Makefile.in
 test/correctness
 test/performance
 test/cachegrind*
+TAGS

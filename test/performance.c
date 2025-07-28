@@ -107,6 +107,7 @@ main(int argc, char *argv[])
 {
         double start_time;
         double end_time;
+        double avg_entries_per_second = 0.0;
         pthread_t thread_id; // consumer/entry processor
         struct cursor_t cursor;
         struct entry_t *entry;
@@ -155,6 +156,7 @@ main(int argc, char *argv[])
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Global-Variable non-blocking test done\n\n");
+        avg_entries_per_second += (double)ENTRIES_TO_GENERATE/(end_time - start_time);
 
 
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -190,6 +192,7 @@ main(int argc, char *argv[])
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Global-Variable blocking test done\n\n");
+        avg_entries_per_second += (double)ENTRIES_TO_GENERATE/(end_time - start_time);
 
 
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -227,6 +230,7 @@ main(int argc, char *argv[])
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Stack-Variable non-blocking test done\n\n");
+        avg_entries_per_second += (double)ENTRIES_TO_GENERATE/(end_time - start_time);
 
 
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -262,6 +266,7 @@ main(int argc, char *argv[])
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("As-Stack-Variable blocking test done\n\n");
+        avg_entries_per_second += (double)ENTRIES_TO_GENERATE/(end_time - start_time);
 
 
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -299,6 +304,7 @@ main(int argc, char *argv[])
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("On-The-Heap non-blocking test done\n\n");
+        avg_entries_per_second += (double)ENTRIES_TO_GENERATE/(end_time - start_time);
 
 
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -334,6 +340,11 @@ main(int argc, char *argv[])
         printf("Elapsed time = %lf seconds\n", end_time - start_time);
         printf("Entries per second %lf\n", (double)ENTRIES_TO_GENERATE/(end_time - start_time));
         printf("On-The-Heap blocking test done\n");
+        avg_entries_per_second += (double)ENTRIES_TO_GENERATE/(end_time - start_time);
+
+        avg_entries_per_second /= 6.0;
+        printf("\n\nAverage number of entries per second: %lf\n\n", avg_entries_per_second);
+
 
         return EXIT_SUCCESS;
 }
