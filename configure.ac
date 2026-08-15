@@ -9,7 +9,7 @@
 # without any warranty.
 
 AC_PREREQ([2.68])
-AC_INIT([disruptorC],[0.5.0],[jcolding@gmail.com])
+AC_INIT([disruptorC],[0.6.0],[jcolding@gmail.com])
 AC_COPYRIGHT([Copyright (C) 2012 Jules Colding. All Rights Reserved.])
 
 # For GCC extensions

@@ -1,0 +1,16 @@
+0.6.0
+
+* Cached gating sequence: publishers rescan consumers only when a
+  claim would wrap the ring.
+* Multi-producer publish uses an available[] buffer so commits are
+  independent; max_read_cursor is advanced over the contiguous run.
+* Single-producer sequencer (sp_publisher_*): no fetch-add, release
+  store on commit.
+* Batch claim: publisher_next_entries_* and sp_publisher_next_entries_*.
+* Wait strategy rechecks the condition every DISRUPTOR_PAUSE_SPINS
+  pauses instead of spinning 5120 times blindly, then yields.
+* Sequences padded to two cache lines (Intel adjacent-line prefetch).
+* DEFINE_ENTRY_TYPE no longer pads every slot; DEFINE_PADDED_ENTRY_TYPE
+  keeps the old layout.
+* Consumer cursor release uses __ATOMIC_RELEASE.
+* Portable CPU pause (x86 PAUSE, ARM YIELD).

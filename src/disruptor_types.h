@@ -1,5 +1,5 @@
 /*
- *    Copyright (C) 2012-2025, Jules Colding <jcolding@gmail.com>.
+ *    Copyright (C) 2012-2026, Jules Colding <jcolding@gmail.com>.
  *
  *    All Rights Reserved.
  */
@@ -48,19 +48,33 @@
 #include "memsizes.h"
 
 /*
- * Cacheline padded counter.
+ * Sequences are padded to two cache lines. On Intel the adjacent-line
+ * prefetcher otherwise pulls the neighbouring counter in with every
+ * access, and write_cursor / max_read_cursor would false-share.
+ */
+#ifndef DISRUPTOR_SEQUENCE_ALIGN
+#define DISRUPTOR_SEQUENCE_ALIGN (CACHE_LINE_SIZE * 2)
+#endif
+
+#define DISRUPTOR_SEQUENCE_PADDING__                                                       \
+        uint8_t padding[(DISRUPTOR_SEQUENCE_ALIGN > sizeof(uint_fast64_t))                 \
+                                ? (DISRUPTOR_SEQUENCE_ALIGN - sizeof(uint_fast64_t))       \
+                                : 0]
+
+/*
+ * Two-cacheline padded counter.
  */
 struct count_t {
         uint_fast64_t count;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? (CACHE_LINE_SIZE - sizeof(uint_fast64_t)) : (sizeof(uint_fast64_t) % CACHE_LINE_SIZE)];
-} __attribute__((aligned(CACHE_LINE_SIZE)));
+        DISRUPTOR_SEQUENCE_PADDING__;
+} __attribute__((aligned(DISRUPTOR_SEQUENCE_ALIGN)));
 
 /*
- * Cacheline padded cursor into ring buffer. Wrapping around forever.
+ * Two-cacheline padded cursor into the ring buffer. Wraps forever.
  */
 struct cursor_t {
         uint_fast64_t sequence;
-        uint8_t padding[(CACHE_LINE_SIZE > sizeof(uint_fast64_t)) ? (CACHE_LINE_SIZE - sizeof(uint_fast64_t)) : (sizeof(uint_fast64_t) % CACHE_LINE_SIZE)];
-} __attribute__((aligned(CACHE_LINE_SIZE)));
+        DISRUPTOR_SEQUENCE_PADDING__;
+} __attribute__((aligned(DISRUPTOR_SEQUENCE_ALIGN)));
 
-#endif //  DISRUPTORC_TYPES_H
+#endif /* DISRUPTORC_TYPES_H */

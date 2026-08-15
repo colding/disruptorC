@@ -12,9 +12,29 @@ Build by:
 Then run the tests in test/.
 
 
-TODO: 
+Multi-producer vs single-producer
 
-* Improve performance.
+* publisher_next_entry_* / publisher_commit_entry_*
+  Multi-producer. Claiming uses a fetch-add (or CAS). Publishing
+  marks available[seq] and does not wait for earlier publishers.
+
+* sp_publisher_next_entry_* / sp_publisher_commit_entry
+  Single-producer only. Plain increment plus a release store of
+  max_read_cursor. Do not mix with the multi-producer claim functions
+  on the same ring.
+
+* publisher_next_entries_* / sp_publisher_next_entries_*
+  Claim n slots. cursor->sequence is the last sequence in the range
+  [cursor->sequence - n + 1, cursor->sequence].
+
+Entries are unpadded by default (DEFINE_ENTRY_TYPE). Use
+DEFINE_PADDED_ENTRY_TYPE if neighbouring slots false-share.
+
+Wait knobs (define before including disruptor.h):
+
+* DISRUPTOR_PAUSE_SPINS   — PAUSE iterations between condition checks
+                             (default 64). BUILTIN_WAIT_COUNT__ is an alias.
+* DISRUPTOR_YIELD_EVERY   — wait ticks before sched_yield() (default 32).
 
 
 NOTES:
