@@ -68,12 +68,13 @@ entry_processor_thread(void *arg)
         struct count_t reg_number;
         const struct entry_t *entry;
 
+        /* register and setup entry processor */
         cursor.sequence = entry_processor_barrier_register(buffer, &reg_number);
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
                 entry_processor_barrier_wait_for_blocking(buffer, &cursor_upper_limit);
-                for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) {
+                for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { /* batching */
                         entry = ring_buffer_show_entry(buffer, &n);
                         if (STOP == entry->content)
                                 goto out;
@@ -157,7 +158,7 @@ run_case(struct ring_buffer_t *rb,
          const char *label,
          double *avg)
 {
-        pthread_t thread_id;
+        pthread_t thread_id; /* consumer / entry processor */
         double start_time;
         double end_time;
         double eps;

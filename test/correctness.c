@@ -181,12 +181,13 @@ entry_processor_thread(void *arg)
         struct count_t reg_number;
         const struct entry_t *entry;
 
+        /* register and setup entry processor */
         cursor.sequence = entry_processor_barrier_register(buffer, &reg_number);
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
                 entry_processor_barrier_wait_for_blocking(buffer, &cursor_upper_limit);
-                for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) {
+                for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { /* batching */
                         entry = ring_buffer_show_entry(buffer, &n);
                         if (STOP == entry->content) {
                                 printf("Entry processor exiting normally\n");
@@ -227,12 +228,13 @@ entry_processor_counting_thread(void *arg)
         const struct entry_t *entry;
 
         args->seen = 0;
+        /* register and setup entry processor */
         cursor.sequence = entry_processor_barrier_register(buffer, &reg_number);
         cursor_upper_limit.sequence = cursor.sequence;
 
         do {
                 entry_processor_barrier_wait_for_blocking(buffer, &cursor_upper_limit);
-                for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) {
+                for (n.sequence = cursor.sequence; n.sequence <= cursor_upper_limit.sequence; ++n.sequence) { /* batching */
                         entry = ring_buffer_show_entry_at(buffer, n.sequence);
                         if (STOP == entry->content)
                                 goto out;
@@ -326,10 +328,13 @@ main(void)
                 return EXIT_FAILURE;
         }
 
+        /* first as a global variable (non-blocking) */
         ok = run_mp_pair(&ring_buffer, entry_publisher_nonblocking_thread,
                          "As-Global-Variable (non-blocking) test done") && ok;
+        /* then as a stack variable (blocking) */
         ok = run_mp_pair(&ring_buffer_stack, entry_publisher_blocking_thread,
                          "As-Stack-Variable (blocking) test done") && ok;
+        /* now as allocated on the heap (blocking) */
         ok = run_mp_pair(ring_buffer_heap, entry_publisher_blocking_thread,
                          "On-The-Heap (blocking) test done") && ok;
 
